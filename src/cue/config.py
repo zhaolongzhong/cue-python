@@ -1,4 +1,5 @@
-from typing import Any, Optional
+import sys
+from typing import Any, ClassVar, Optional
 from pathlib import Path
 from functools import lru_cache
 
@@ -37,8 +38,13 @@ class Settings(BaseSettings):
             )
         )
 
+    if "pytest" in sys.modules:
+        env_file: ClassVar[str] = ".env.test"
+    else:
+        env_file: ClassVar[str] = ".env"
+
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).parent.parent.parent / ".env"),
+        env_file=env_file,
         env_file_encoding="utf-8",
         from_attributes=True,
         extra="ignore",

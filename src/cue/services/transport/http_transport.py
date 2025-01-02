@@ -20,14 +20,14 @@ class HTTPTransport(Protocol):
 class AioHTTPTransport(HTTPTransport):
     """AIOHTTP implementation of HTTP transport"""
 
-    def __init__(self, base_url: str, access_token: str, session: Optional[aiohttp.ClientSession] = None):
+    def __init__(self, base_url: str, api_key: str, session: Optional[aiohttp.ClientSession] = None):
         self.base_url = base_url
-        self.access_token = access_token
+        self.api_key = api_key
         self.is_server_available = False
         self.headers = {
             "accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.access_token}",
+            "X-API-Key": f"{self.api_key}",
         }
         self.session = session or aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),

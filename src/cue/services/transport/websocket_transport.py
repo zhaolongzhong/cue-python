@@ -35,7 +35,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         self,
         ws_url: str,
         client_id: str,
-        access_token: str,
+        api_key: str,
         runner_id: Optional[str] = None,
         session: Optional[aiohttp.ClientSession] = None,
         max_retries: int = 3,
@@ -45,7 +45,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         self.session = session or aiohttp.ClientSession()
         self.ws: Optional[aiohttp.ClientWebSocketResponse] = None
         self.client_id = client_id
-        self.access_token = access_token
+        self.api_key = api_key
         self.runner_id = runner_id
         self.max_retries = max_retries
         self.retry_delay = retry_delay
@@ -69,7 +69,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         for attempt in range(1, self.max_retries + 1):
             try:
                 headers = {
-                    "Authorization": f"Bearer {self.access_token}",
+                    "X-API-Key": f"{self.api_key}",
                     "Connection": "upgrade",
                     "Upgrade": "websocket",
                     "Sec-WebSocket-Version": "13",
@@ -102,8 +102,8 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
 
             except aiohttp.ClientResponseError as e:
                 if e.status == 401:
-                    logger.error("Authentication failed: Invalid or expired access token")
-                    raise WebSocketConnectionError("Authentication failed: Please check your access token")
+                    logger.error("Authentication failed: Invalid or expired api key")
+                    raise WebSocketConnectionError("Authentication failed: Please check your api key")
                 logger.error(f"HTTP error during WebSocket connection: {e.status} - {e.message}")
 
             except aiohttp.WSServerHandshakeError as e:
