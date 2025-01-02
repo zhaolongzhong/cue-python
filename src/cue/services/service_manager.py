@@ -48,7 +48,7 @@ class ServiceManager:
         self.run_metadata = run_metadata
         self.feature_flag = feature_flag
         self.base_url = base_url
-        self.access_token = agent.access_token if agent.access_token else get_settings().ACCESS_TOKEN
+        self.api_key = agent.api_key
         self.agent = agent
         self.overwrite_agent_config: Optional[AgentConfig] = None
         self.assistant_id: Optional[str] = agent.id if agent else None
@@ -65,11 +65,11 @@ class ServiceManager:
             # it will be used as participant so we can find the websocket session of this client by using this id
             self.runner_id = self.client_id
 
-        self._http = AioHTTPTransport(base_url=self.base_url, access_token=self.access_token, session=self._session)
+        self._http = AioHTTPTransport(base_url=self.base_url, api_key=self.api_key, session=self._session)
         self._ws = AioHTTPWebSocketTransport(
             ws_url=self.base_url.replace("http", "ws") + "/ws",
             client_id=self.client_id,
-            access_token=self.access_token,
+            api_key=self.api_key,
             runner_id=self.runner_id if self.run_metadata.mode != "client" else None,
             session=self._session,
         )

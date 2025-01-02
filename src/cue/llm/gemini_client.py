@@ -19,7 +19,7 @@ class GeminiClient(LLMRequest):
         self,
         config: AgentConfig,
     ):
-        api_key = config.api_key or os.environ.get("GEMINI_API_KEY")
+        api_key = config.gemini_api_key or os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("API key is missing in both config and settings.")
         self.client = openai.AsyncOpenAI(
