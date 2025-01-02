@@ -22,7 +22,7 @@ class DynamicContextManager:
     def __init__(
         self,
         model: str,
-        max_tokens: int = 4096,
+        max_tokens: int = 15000,
         feature_flag: FeatureFlag = FeatureFlag(),
         batch_remove_percentage: float = 0.30,
         summarizer: Optional[ContentSummarizer] = None,
