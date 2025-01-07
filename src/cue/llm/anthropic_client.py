@@ -165,17 +165,22 @@ class AnthropicClient:
         # Loop through messages from newest to oldest
         for message in reversed(messages):  # Message 5 -> 4 -> 3 -> 2 -> 1
             if message["role"] == "user" and isinstance(content := message["content"], list):
-                if breakpoints_remaining:
-                    # First 3 iterations (newest messages)
-                    breakpoints_remaining -= 1
-                    content[-1]["cache_control"] = {"type": "ephemeral"}
-                    # Message 5: Set cache point 1
-                    # Message 4: Set cache point 2
-                    # Message 3: Set cache point 3
-                else:
-                    # First message encountered after breakpoints = 0
-                    content[-1].pop("cache_control", None)  # Remove existing cache_control
-                    break  # Stop processing older messages
+                try:
+                    if breakpoints_remaining:
+                        # First 3 iterations (newest messages)
+                        breakpoints_remaining -= 1
+                        content[-1]["cache_control"] = {"type": "ephemeral"}
+                        # Message 5: Set cache point 1
+                        # Message 4: Set cache point 2
+                        # Message 3: Set cache point 3
+                    else:
+                        # First message encountered after breakpoints = 0
+                        content[-1].pop("cache_control", None)  # Remove existing cache_control
+                        break  # Stop processing older messages
+                except IndexError as e:
+                    logger.error(f"_inject_prompt_caching index error: {e}, content: {content}")
+                except Exception as e:
+                    logger.error(f"_inject_prompt_caching error: {e}, content: {content}")
 
     def replace_tool_call_ids(
         self, response_data: Optional[PromptCachingBetaMessage]
