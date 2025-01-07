@@ -1,6 +1,5 @@
 import sys
 from typing import Any, ClassVar, Optional
-from pathlib import Path
 from functools import lru_cache
 
 from pydantic import PostgresDsn, ValidationInfo, field_validator
