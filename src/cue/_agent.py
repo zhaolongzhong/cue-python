@@ -143,10 +143,10 @@ class Agent:
             tools = self.config.tools.copy()
 
             self.tool_json = self.tool_manager.get_tool_definitions(self.config.model, tools)
-            # Add mcp tools if there is any
-            mcp_tools = self.tool_manager.get_mcp_tools(model=self.config.model)
-            if mcp_tools:
-                self.tool_json.extend(mcp_tools)
+            if self.config.enable_mcp:
+                mcp_tools = self.tool_manager.get_mcp_tools(model=self.config.model)
+                if mcp_tools:
+                    self.tool_json.extend(mcp_tools)
             self.token_stats["tool"] = self.token_counter.count_dict_tokens(self.tool_json)
 
     async def clean_up(self):

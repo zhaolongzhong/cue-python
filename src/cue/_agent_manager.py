@@ -53,6 +53,7 @@ class AgentManager:
         logger.debug(f"initialize mode: {run_metadata.mode}")
         self.run_metadata = run_metadata
         self.mcp = mcp
+        print(f"inx mcp:{mcp}")
         if self.primary_agent:
             feature_flag = self.primary_agent.config.feature_flag
         else:

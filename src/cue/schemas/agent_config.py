@@ -28,6 +28,7 @@ class AgentConfig(BaseModel):
     memory_tokens: Optional[int] = 2000  # maximum memory token for each request
     stop_sequences: Optional[list[str]] = None
     tools: Optional[list[Any]] = []  # callable or tool enum
+    enable_mcp: bool = False
     parallel_tool_calls: bool = True
     conversation_id: Optional[str] = None
     enable_services: bool = False

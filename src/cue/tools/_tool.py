@@ -64,7 +64,7 @@ class ToolManager:
             self.tools[Tool.ProjectContextTool.value] = ProjectContextTool(self.service_manager.assistants)
             self.tools[Tool.SystemTool.value] = SystemTool(self.service_manager.assistants)
         self._definition_cache: Dict[str, dict] = {}
-        self.mcp = None  # disable for now
+        self.mcp = mcp  # disable for now
         self._mcp_tools_json = []
         self.mcp_tools_map: Dict[str, Dict[str, Any]] = {}
 

@@ -174,6 +174,7 @@ class AgentProvider:
             access_token=config_dict.get("access_token", None),
             project_context_path=config_dict.get("project_context_path"),
             tools=tools,
+            enable_mcp=config_dict.get("enable_mcp", False),
             is_primary=config_dict.get("is_primary", False),
             temperature=config_dict.get("temperature", 0.7),
             max_tokens=config_dict.get("max_tokens", 1000),
