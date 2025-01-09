@@ -339,3 +339,16 @@ class Agent:
                 feature_flag=self.config.feature_flag,
                 summarizer=self.summarizer,
             )
+            
+    async def get_last_message(self) -> Optional[Union[CompletionResponse, ToolResponseWrapper, MessageParam]]:
+        """Get the last message from the agent's history."""
+        messages = self.context.get_messages()
+        if not messages:
+            # Try to load from storage if available
+            if self.config.feature_flag.enable_storage:
+                messages = await self.message_manager.get_messages_desc(limit=1)
+                
+        if messages:
+            return messages[-1] if isinstance(messages, list) else messages[0]
+            
+        return None

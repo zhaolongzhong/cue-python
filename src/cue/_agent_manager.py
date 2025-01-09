@@ -1,6 +1,12 @@
 import asyncio
 import logging
+from datetime import datetime
 from typing import Any, Dict, List, Union, Callable, Optional
+
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
+from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 from .utils import DebugUtils, console_utils
 from ._agent import Agent
@@ -47,6 +53,14 @@ class AgentManager:
         self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
 
+        # Scheduler setup
+        self.scheduler = AsyncIOScheduler(
+            jobstores={'default': MemoryJobStore()},
+            timezone='UTC'
+        )
+        self._scheduled_jobs: Dict[str, Dict[str, Any]] = {}
+        self._running_scheduled_tasks: Dict[str, int] = {}  # Track running tasks per schedule
+
     async def initialize(
         self, run_metadata: Optional[RunMetadata] = RunMetadata(), mcp: Optional[MCPServerManager] = None
     ):
@@ -67,11 +81,153 @@ class AgentManager:
             )
             await self.service_manager.connect()
 
+        # Start the scheduler
+        if not self.scheduler.running:
+            self.scheduler.start()
+            logger.info("Scheduler started")
+
         # Update other agents info once we set primary agent
         self._update_other_agents_info()
+        
+        # Set up schedules for all agents
+        for agent in self._agents.values():
+            if agent.config.schedule and agent.config.schedule.enabled:
+                await self._setup_agent_schedule(agent)
+        
         await self.initialize_run()
+        
+    async def _setup_agent_schedule(self, agent: Agent) -> None:
+        """Set up scheduling for an agent based on its configuration."""
+        if not agent.config.schedule:
+            return
+            
+        schedule = agent.config.schedule
+        if not schedule.enabled:
+            return
+            
+        job_id = f"schedule_{agent.id}"
+        
+        # Remove existing job if any
+        if job_id in self._scheduled_jobs:
+            self.scheduler.remove_job(job_id)
+            self._scheduled_jobs.pop(job_id)
+            
+        # Initialize running task counter
+        self._running_scheduled_tasks[job_id] = 0
+        
+        # Create trigger based on schedule type
+        if schedule.interval:
+            trigger = IntervalTrigger(
+                seconds=int(schedule.interval.total_seconds()),
+                timezone='UTC'
+            )
+        elif schedule.cron:
+            trigger = CronTrigger.from_crontab(schedule.cron, timezone='UTC')
+        else:
+            logger.error(f"No valid schedule configuration for agent {agent.id}")
+            return
+            
+        # Add the job
+        self.scheduler.add_job(
+            self._run_scheduled_task,
+            trigger=trigger,
+            id=job_id,
+            kwargs={
+                'agent_id': agent.id,
+                'job_id': job_id
+            },
+            max_instances=schedule.max_concurrent,
+            coalesce=True,  # Combine missed runs
+            misfire_grace_time=60  # Allow 1 minute delay
+        )
+        
+        next_run = schedule.get_next_run_time()
+        logger.info(f"Scheduled task for agent {agent.id} - Next run: {next_run}")
+        
+        self._scheduled_jobs[job_id] = {
+            'agent_id': agent.id,
+            'schedule': schedule,
+            'next_run': next_run
+        }
+        
+    async def _run_scheduled_task(self, agent_id: str, job_id: str) -> None:
+        """Execute a scheduled task for an agent."""
+        try:
+            agent = self._agents[agent_id]
+            schedule = agent.config.schedule
+            
+            # Skip if agent is currently active or has a running task
+            if (self.active_agent and self.active_agent.id == agent_id) or \
+               (self.execute_run_task and not self.execute_run_task.done()):
+                logger.info(f"Skipping scheduled task for {agent_id} - agent is currently active/processing")
+                return
+                
+            # Check if agent has recent activity (last 30 seconds)
+            last_message = await agent.get_last_message()
+            if last_message:
+                last_time = getattr(last_message, 'timestamp', None) or datetime.now()
+                if isinstance(last_time, str):
+                    last_time = datetime.fromisoformat(last_time.replace('Z', '+00:00'))
+                if (datetime.now() - last_time).total_seconds() < 30:
+                    logger.info(f"Skipping scheduled task for {agent_id} - agent has recent activity")
+                    return
+            
+            # Check concurrent runs limit
+            if self._running_scheduled_tasks[job_id] >= schedule.max_concurrent:
+                logger.warning(f"Skipping scheduled task for {agent_id} - maximum concurrent runs reached")
+                return
+                
+            self._running_scheduled_tasks[job_id] += 1
+            
+            try:
+                # Format the instruction with current time
+                current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                instruction = schedule.scheduled_instruction.format(time=current_time)
+                
+                # Create a message from the scheduler (appearing as a user)
+                message = MessageParam(
+                    role="user",
+                    content=instruction,
+                    name=schedule.scheduler_name,
+                    model=agent.config.model
+                )
+                
+                # Add message to agent's history
+                await agent.add_message(message)
+                
+                # Start the run with specialized metadata
+                run_metadata = RunMetadata(
+                    mode="scheduled",
+                    current_turn=0,
+                    user_messages=[instruction]
+                )
+                
+                await self.start_run(
+                    active_agent_id=agent_id,
+                    message=None,  # Message already added to history
+                    run_metadata=run_metadata,
+                    callback=self.handle_response
+                )
+                
+                # Update next run time in job info
+                if job_id in self._scheduled_jobs:
+                    self._scheduled_jobs[job_id]['next_run'] = schedule.get_next_run_time()
+                    
+            finally:
+                self._running_scheduled_tasks[job_id] -= 1
+                
+        except Exception as e:
+            logger.error(f"Error in scheduled task for agent {agent_id}: {e}")
+            # Optionally notify the agent about the error
+            error_msg = f"Scheduled task error: {str(e)}"
+            await agent.add_message(MessageParam(role="system", content=error_msg))
 
     async def clean_up(self):
+        # Shutdown scheduler
+        if self.scheduler.running:
+            self.scheduler.shutdown(wait=True)
+            logger.info("Scheduler shutdown complete")
+            
         if self.service_manager:
             await self.service_manager.close()
 
@@ -87,7 +243,9 @@ class AgentManager:
             await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
         self._agents.clear()
-        logger.info("All agents cleaned up and removed.")
+        self._scheduled_jobs.clear()
+        self._running_scheduled_tasks.clear()
+        logger.info("All agents and schedules cleaned up and removed.")
 
     async def initialize_run(self):
         if not self.tool_manager:
