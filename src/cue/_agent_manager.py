@@ -1,4 +1,5 @@
 import asyncio
+import time
 import logging
 from typing import Any, Dict, List, Union, Callable, Optional
 
@@ -11,6 +12,7 @@ from .schemas import (
     AgentTransfer,
     CompletionResponse,
     ConversationContext,
+    ToolCallToolUseBlock,
 )
 from .services import ServiceManager
 from ._agent_loop import AgentLoop
@@ -46,6 +48,11 @@ class AgentManager:
         self.execute_run_task: Optional[asyncio.Task] = None
         self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
+        
+        # Idle task check tracking
+        self._idle_check_performed: Dict[str, bool] = {}  # Track per agent if idle check was done
+        self._last_tool_use: Dict[str, float] = {}  # Track last tool use timestamp per agent
+        self._idle_timeout = 60  # Time in seconds before considering agent idle
 
     async def initialize(
         self, run_metadata: Optional[RunMetadata] = RunMetadata(), mcp: Optional[MCPServerManager] = None
@@ -283,6 +290,20 @@ class AgentManager:
     async def handle_response(self, response: Union[CompletionResponse, MessageParam]):
         self.console_utils.print_msg(f"{response.get_text()}")
         await self.broadcast_response(response)
+        
+        # Track tool usage and check idle state
+        agent_id = self.active_agent.id if self.active_agent else None
+        if agent_id:
+            current_time = time.time()
+            
+            if isinstance(response, ToolCallToolUseBlock):
+                logger.debug(f"Agent {agent_id} used tool, resetting idle state")
+                # Update last tool use time and reset idle check
+                self._last_tool_use[agent_id] = current_time
+                self._idle_check_performed[agent_id] = False
+            else:
+                # Check for idle state if this wasn't a tool use
+                await self._check_idle_state(self.active_agent)
 
     async def inject_user_message(self, user_input: str) -> None:
         """Inject a user message into the ongoing run."""
@@ -334,4 +355,41 @@ class AgentManager:
             {"id": agent.id, "description": agent.description}
             for agent in self._agents.values()
             if agent.id not in exclude
+
+    async def _check_idle_state(self, agent: Agent) -> None:
+        """Check if agent is idle and should check for new tasks.
+        
+        An agent is considered idle if:
+        1. No tool use in the last _idle_timeout seconds
+        2. Hasn't performed an idle check yet
+        3. Last response had no tool use
+        """
+        agent_id = agent.id
+        current_time = time.time()
+        
+        # Skip if we've already done an idle check for this agent
+        if self._idle_check_performed.get(agent_id, False):
+            return
+            
+        # Check if enough time has passed since last tool use
+        last_tool_time = self._last_tool_use.get(agent_id, 0)
+        if current_time - last_tool_time < self._idle_timeout:
+            return
+            
+        logger.debug(f"Agent {agent_id} appears idle, prompting for task check")
+        
+        # Mark that we've done the idle check
+        self._idle_check_performed[agent_id] = True
+        
+        # Prompt agent to check for new tasks
+        idle_prompt = (
+            "I notice there hasn't been any tool use recently. "
+            "Would you like to check if there are any pending tasks or anything else "
+            "that needs attention? You can use available tools to check the status "
+            "of various systems or project items. If you find nothing pending, "
+            "just acknowledge that everything is up to date."
+        )
+        
+        user_message = MessageParam(role="user", content=idle_prompt)
+        await agent.add_message(user_message)
         ]
