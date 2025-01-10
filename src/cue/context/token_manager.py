@@ -48,8 +48,16 @@ class TokenManager:
     def can_add_message(self, current_tokens: int, message_tokens: int) -> bool:
         """Check if a new message can be added without exceeding limits."""
         total = current_tokens + message_tokens
-        # Allow if under max or if removing the excess would still leave us above min
-        return (
-            total <= self.config.max_tokens or
-            (total - self.config.min_tokens_to_keep) >= message_tokens
-        )
+
+        # If under max_tokens, always allow
+        if total <= self.config.max_tokens:
+            return True
+
+        # If we're already over min_tokens_to_keep, don't allow more
+        if current_tokens >= self.config.min_tokens_to_keep:
+            return False
+
+        # If adding would put us over max but we're under min_tokens_to_keep,
+        # allow only if it wouldn't exceed max by too much
+        max_excess = self.config.max_tokens * (1 + self.config.excess_threshold)
+        return total <= max_excess

@@ -19,7 +19,7 @@ class ContextConfig:
     max_summaries: int = 6
 
     # Token management settings
-    min_tokens_to_keep: int = 1000  # Minimum tokens to preserve
+    min_tokens_to_keep: int = 300  # Changed from 1000 to 300
     excess_threshold: float = 0.25  # Maximum excess tokens before forced truncation
 
     def __post_init__(self):
