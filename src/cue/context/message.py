@@ -3,7 +3,7 @@ from typing import Union, Optional
 
 from ..schemas import Message, MessageParam, MessageCreate
 from ..services.service_manager import ServiceManager
-from ..schemas.completion_respone import CompletionResponse
+from ..schemas.completion_response import CompletionResponse
 from ..schemas.tool_response_wrapper import ToolResponseWrapper
 
 logger = logging.getLogger(__name__)

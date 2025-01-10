@@ -10,7 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.console import Console
 
-from ..schemas.completion_respone import CompletionUsage
+from ..schemas.completion_response import CompletionUsage
 
 logger = getLogger(__name__)
 

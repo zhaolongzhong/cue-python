@@ -13,7 +13,7 @@ from .event_message import EventMessage, EventMessageType
 from .message_param import MessageParam
 from .assistant_memory import AssistantMemory, AssistantMemoryCreate, AssistantMemoryUpdate, RelevantMemoriesResponse
 from .completion_request import CompletionRequest
-from .completion_respone import CompletionResponse, ToolCallToolUseBlock
+from .completion_response import CompletionResponse, ToolCallToolUseBlock
 from .conversation_context import ConversationContext
 from .tool_response_wrapper import AgentTransfer, ToolResponseWrapper
 
