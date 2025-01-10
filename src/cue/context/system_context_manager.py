@@ -59,7 +59,7 @@ class SystemContextManager:
             self.token_stats["context_updated"] = True
             self.metrics["context_updated"] = True
             logger.debug(
-                f"System context updated, metrics: {json.dumps(self.metrics, indent=4)}, \n{json.dumps({'old': self.system_context, 'new': new_system_context})}"
+                f"System context updated, \n{json.dumps({'old': self.system_context, 'new': new_system_context})}"
             )
 
         else:
