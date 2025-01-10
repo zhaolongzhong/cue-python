@@ -249,7 +249,6 @@ class ServiceManager:
     async def _check_server_availability(self) -> bool:
         """Check if the server is running by performing an HTTP GET request to the health endpoint."""
         health_url = f"{self.base_url}/health"
-        logger.debug(f"Performing health check at {health_url}")
         try:
             async with self._session.get(health_url, timeout=10) as response:
                 if response.status != 200:

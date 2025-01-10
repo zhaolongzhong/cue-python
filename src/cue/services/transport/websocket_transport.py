@@ -78,10 +78,6 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
                 ws_url_with_params = f"{self.ws_url}/{self.client_id}"
                 if self.runner_id:
                     ws_url_with_params += f"?runner_id={self.runner_id}"
-                logger.debug(
-                    f"Attempting WebSocket connection to {ws_url_with_params} (attempt {attempt}/{self.max_retries})"
-                )
-
                 self.ws = await self.session.ws_connect(
                     ws_url_with_params,
                     headers=headers,
@@ -90,7 +86,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
                 )
 
                 self._connected = True
-                logger.info(f"WebSocket connection established for client {self.client_id}")
+                logger.debug(f"WebSocket connection established for client {self.client_id}")
 
                 # Start heartbeat after connection is established
                 await self.heartbeat.start()

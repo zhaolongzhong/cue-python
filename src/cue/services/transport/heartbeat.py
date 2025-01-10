@@ -42,7 +42,7 @@ class WebSocketHeartbeat:
         self._running = True
         self._last_pong = datetime.now()
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
-        logger.info("WebSocket heartbeat started")
+        logger.debug("WebSocket heartbeat started")
 
     async def stop(self):
         """Stop the heartbeat mechanism"""

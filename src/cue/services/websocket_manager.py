@@ -91,7 +91,7 @@ class WebSocketManager:
                 self._metrics.last_connected_at = datetime.now()
                 self._start_message_processing()
                 self._ensure_queue_processor()
-                logger.info(f"WebSocket connection established (attempt {self._metrics.connection_attempts})")
+                logger.debug(f"WebSocket connection established (attempt {self._metrics.connection_attempts})")
             except Exception as e:
                 self._state = WebSocketState.DISCONNECTED
                 self._metrics.last_error = str(e)

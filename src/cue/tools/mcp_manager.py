@@ -74,8 +74,10 @@ class MCPServerManager:
             self.logger.debug(f"Server {server_name} cleanup completed")
 
     async def connect(self):
-        self.logger.info("MCPServerManager connecting...")
         configs = self._load_config()
+        if not configs:
+            return
+        self.logger.info("MCPServerManager connecting...")
 
         try:
             for server_name, server_params in configs.items():
@@ -124,7 +126,7 @@ class MCPServerManager:
 
     def _load_config(self) -> Dict[str, StdioServerParameters]:
         if not os.path.exists(self.config_path):
-            self.logger.warning(f"Config file not found: {self.config_path}")
+            self.logger.warning(f"MCP config file not found, skip mcp: {self.config_path}")
             return {}
 
         try:
