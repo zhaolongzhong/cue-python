@@ -87,6 +87,8 @@ class AgentManager:
             await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
         self._agents.clear()
+        self.primary_agent = None
+        self.active_agent = None
         logger.info("All agents cleaned up and removed.")
 
     async def initialize_run(self):
