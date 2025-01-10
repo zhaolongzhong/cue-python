@@ -1,3 +1,4 @@
+"""Base agent implementation."""
 import os
 import json
 import logging
@@ -7,6 +8,7 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from .llm import LLMClient
+from .agent import AgentState
 from .tools import Tool, MemoryTool, ToolManager
 from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
 from .context import SystemContextManager, DynamicContextManager, ProjectContextManager
@@ -34,16 +36,7 @@ class Agent:
     def __init__(self, config: AgentConfig):
         self.id = config.id
         self.config = config
-        self.token_stats = {
-            "system": 0,
-            "tool": 0,
-            "project": 0,
-            "memories": 0,
-            "summaries": 0,
-            "messages": 0,
-            "actual_usage": {},
-        }
-        self.metrics = {"token_stats": self.token_stats}
+        self.state = AgentState()
         self.tool_manager: Optional[ToolManager] = None
         self.summarizer = ContentSummarizer(
             AgentConfig(
@@ -51,7 +44,7 @@ class Agent:
                 api_key=config.api_key,
             )
         )
-        self.system_context_manager = SystemContextManager(metrics=self.metrics, token_stats=self.token_stats)
+        self.system_context_manager = SystemContextManager(metrics=self.state.get_metrics(), token_stats=self.state.get_token_stats())
         self.project_context_manager = ProjectContextManager(path=self.config.project_context_path)
         self.memory_manager = DynamicMemoryManager(max_tokens=1000)
         self.context = DynamicContextManager(
@@ -65,15 +58,16 @@ class Agent:
         self.description = self._generate_description()
         self.other_agents_info = ""
         self.tool_json = None
-        self.conversation_context: Optional[ConversationContext] = None  # current conversation context
         self.system_message_builder = SystemMessageBuilder(self.id, self.config)
         self.setup_feedback()
-        self.has_initialized: bool = False
         self.token_counter = TokenCounter()
         self.service_manager: Optional[ServiceManager] = None
-        self.system_context: Optional[str] = None  # memories and project context
-        self.system_message_param: Optional[str] = None
         self.message_manager: MessageManager = MessageManager()
+
+        # Move references from state to class properties for now
+        self.conversation_context: Optional[ConversationContext] = None
+        self.system_context: Optional[str] = None
+        self.system_message_param: Optional[str] = None
 
     def set_service_manager(self, service_manager: ServiceManager):
         self.service_manager = service_manager
@@ -96,6 +90,7 @@ class Agent:
             self.memory_manager.add_memories(memory_dict)
             self.memory_manager.update_recent_memories()
         except Exception as e:
+            self.state.record_error(e)
             logger.error(f"Ran into error while trying to get recent memories: {e}")
             return None
 
@@ -113,7 +108,7 @@ class Agent:
         return description
 
     async def _initialize(self, tool_manager: ToolManager):
-        if self.has_initialized:
+        if self.state.has_initialized:
             return
 
         logger.debug(f"initialize ... \n{self.config.model_dump_json(indent=4)}")
@@ -133,10 +128,11 @@ class Agent:
                     self.context.clear_messages()
                     await self.add_messages(messages)
         except Exception as e:
+            self.state.record_error(e)
             logger.error(f"Ran into error when initialize: {e}")
 
         self.summarizer.update_context(self.system_context)
-        self.has_initialized = True
+        self.state.has_initialized = True
 
     def update_tool_json(self):
         if self.config.tools:
@@ -147,7 +143,7 @@ class Agent:
                 mcp_tools = self.tool_manager.get_mcp_tools(model=self.config.model)
                 if mcp_tools:
                     self.tool_json.extend(mcp_tools)
-            self.token_stats["tool"] = self.token_counter.count_dict_tokens(self.tool_json)
+            self.state.update_token_stats("tool", str(self.tool_json))
 
     async def clean_up(self):
         if self.tool_manager:
@@ -177,9 +173,11 @@ class Agent:
                     logger.debug("We have truncated messages, update context")
                     await self.update_context()
                 except Exception as e:
+                    self.state.record_error(e)
                     logger.debug(f"Ran into error when update context: {e}")
-            self.token_stats["context_window"] = self.context.get_context_stats()
+            self.state.update_context_stats(self.context.get_context_stats())
         except Exception as e:
+            self.state.record_error(e)
             logger.error(f"Ran into error when add messages: {e}")
         return messages
 
@@ -192,6 +190,7 @@ class Agent:
             message_with_id = await self.message_manager.persist_message(message)
             return message_with_id
         except Exception as e:
+            self.state.record_error(e)
             logger.error(f"Ran into error when persist message: {e}")
         return message
 
@@ -252,10 +251,12 @@ class Agent:
             self.metadata = run_metadata
             await self._initialize(tool_manager)
             message_params = await self.build_message_params()
-            tokens = self.token_counter.count_dict_tokens(message_params)
-            self.token_stats["messages"] = tokens
+            messages_str = str(message_params)
+            self.state.update_token_stats("messages", messages_str)
+            self.state.record_message()
             return await self.send_messages(messages=message_params, run_metadata=run_metadata, author=author)
         except Exception as e:
+            self.state.record_error(e)
             logger.error(f"Ran into error during run: {e}")
             raise
 
@@ -274,10 +275,10 @@ class Agent:
         ]
 
         system_message_content = self.get_system_message().content
-        self.token_stats["system"] = self.token_counter.count_token(system_message_content)
+        self.state.update_token_stats("system", system_message_content)
         system_context = self.build_system_context()
-        self.metadata.token_stats = self.token_stats
-        self.metadata.metrics = self.metrics
+        self.metadata.token_stats = self.state.get_token_stats()
+        self.metadata.metrics = self.state.get_metrics()
 
         completion_request = CompletionRequest(
             author=Author(name=self.id, role="assistant") if not author else author,
@@ -291,9 +292,9 @@ class Agent:
 
         response = await self.client.send_completion_request(completion_request)
         usage_dict = record_usage(response)
-        self.token_stats["actual_usage"] = usage_dict
-        record_usage_details(self.token_stats)
-        logger.debug(f"metrics: {json.dumps(self.metrics, indent=4)}")
+        self.state.update_usage_stats(usage_dict)
+        record_usage_details(self.state.get_token_stats())
+        logger.debug(f"metrics: {json.dumps(self.state.get_metrics(), indent=4)}")
         logger.debug(f"{self.id} response: {response}")
         return response
 
