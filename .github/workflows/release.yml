@@ -1,0 +1,67 @@
+name: Release Cue
+
+on:
+  push:
+    branches:
+      - "release/cue/*"
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Determine version
+        id: version
+        run: |
+          ./scripts/determine-version.sh
+
+      - name: Create .env file
+        run: |
+          echo "API_URL=${{ secrets.API_URL }}" > .env
+          chmod 644 .env
+          cp .env src/cue/
+          ls -la .env* src/cue/.env*
+
+      - name: Build Cue
+        run: |
+          echo "${{ env.version_name }}"
+          ./scripts/build-cue.sh
+
+      - name: Create Release Tag
+        id: create_tag
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git tag -a ${{ env.new_tag }} -m "Release ${{ env.new_tag }}"
+          git push origin ${{ env.new_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.new_tag }}
+          name: Release ${{ env.new_tag }}
+          body: |
+            Version Name: ${{ env.version_name }}
+            Version Code: ${{ env.version_code }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
