@@ -1,0 +1,29 @@
+#!/bin/bash
+
+commit_types=(
+    "feat"     # New features
+    "fix"      # Bug fixes
+    "docs"     # Documentation
+    "style"    # Code style
+    "refactor" # Code refactoring
+    "test"     # Tests
+    "chore"    # Maintenance
+    "release"  # Release
+)
+
+# Extract the first line of the commit message from the provided file
+commit_msg=$(head -n1 "$1")
+
+# Build the regex pattern from commit_types
+commit_pattern="^($(IFS='|'; echo "${commit_types[*]}"))(\([a-z]+\))?: .+"
+
+if [[ ! $commit_msg =~ $commit_pattern ]]; then
+    echo "Invalid commit format. Use: type(scope?): message"
+    echo "Examples:"
+    echo "feat: new feature"
+    echo "fix(memory): resolve leak"
+    echo "docs: update readme"
+    exit 1
+fi
+
+exit 0

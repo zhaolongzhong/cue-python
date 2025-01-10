@@ -1,10 +1,8 @@
-# Git Hooks for Cue Development
+# Git Hooks
 
-This directory contains Git hooks for enforcing iOS development workflow standards.
+Automated git hooks for code quality and consistency.
 
-## Installation
-
-Run the installation script:
+## Quick Start
 
 ```bash
 ./scripts/git-hooks/install.sh
@@ -12,29 +10,57 @@ Run the installation script:
 
 ## Features
 
-The pre-commit hook enforces:
+### Protected Branches
 
-1. Protected Branch Rules
+Prevents direct commits to:
 
-   - Prevents direct commits to main/master/release/production/develop
-   - Shows helpful error messages with instructions
-   - Provides emergency override option (--no-verify)
+- main, master
+- release, production
+- develop
 
-2. Branch Naming Convention
+### Branch Naming
 
-   - feat/feature-name (for new features)
-   - feature/feature-name (for new features)
-   - bugfix/bug-name (for bug fixes)
-   - docs/change-name (for documentation)
-   - refactor/name (for code refactoring)
-   - style/change-name (for styling changes)
-   - test/suite-name (for testing changes)
-   - chore/task-name (for maintenance tasks)
+Format: `{type}/{description}`
 
-## Manual Override
+- `feat/` - New features
+- `fix/` - Bug fixes
+- `docs/` - Documentation
+- `style/` - Code style
+- `refactor/` - Code refactoring
+- `test/` - Tests
+- `chore/` - Maintenance
 
-In case of emergency, you can bypass the pre-commit hook using:
+### Commit Messages
+
+Format: `type(optional-scope): message`
+
+Examples:
+
+```
+feat: add user authentication
+fix(memory): resolve memory leak
+docs: update installation guide
+```
+
+### Auto-formatting
+
+- Runs pre-commit format checks
+- Auto-commits formatting fixes
+- Restores state if format fails
+
+### Bypass Hooks
 
 ```bash
-git commit --no-verify
+git commit --no-verify  # Use cautiously
 ```
+
+## Implementation
+
+The hooks enforce:
+
+1. Branch protection
+2. Branch naming conventions
+3. Commit message format
+4. Code formatting standards
+
+See `pre-commit` and `commit-msg` hooks in the `/scripts/git-hooks` directory for details.
