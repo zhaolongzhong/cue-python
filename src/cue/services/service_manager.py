@@ -106,6 +106,7 @@ class ServiceManager:
     ):
         settings = get_settings()
         base_url = base_url or settings.API_URL
+        logger.info(f"create self.base_url: {base_url}")
         session = aiohttp.ClientSession()
         service_manager = cls(
             run_metadata=run_metadata,
@@ -280,7 +281,7 @@ class ServiceManager:
             logger.error("Health check response is not valid JSON.")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error during health check: {e}")
+            logger.error(f"Unexpected error during health check: {e}, self.base_url: {self.base_url}")
             raise
 
     async def _prepare_conversation(self, agent: AgentConfig):
