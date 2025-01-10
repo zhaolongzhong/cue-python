@@ -49,14 +49,15 @@ async def test_agent_initialization(agent: Agent, agent_config: AgentConfig) -> 
     assert agent.id == "test_agent"
     assert agent.config == agent_config
     assert agent.description == "Test agent Agent test_agent is able to use these tools: edit, memory"
-    assert not agent.has_initialized
-    assert agent.token_stats == {
+    assert not agent.state.has_initialized
+    assert agent.state.get_token_stats() == {
         "system": 0,
         "tool": 0,
         "project": 0,
         "memories": 0,
         "summaries": 0,
         "messages": 0,
+        "context_window": None,
         "actual_usage": {},
     }
 
@@ -66,7 +67,7 @@ async def test_agent_initialization_with_tools(agent: Agent, mock_tool_manager: 
     """Test agent initialization with tool manager."""
     await agent._initialize(mock_tool_manager)
 
-    assert agent.has_initialized
+    assert agent.state.has_initialized
     assert agent.tool_manager == mock_tool_manager
     mock_tool_manager.initialize.assert_called_once()
     mock_tool_manager.get_tool_definitions.assert_called_once()
@@ -189,4 +190,4 @@ async def test_run_message_flow(agent: Agent, mock_tool_manager: Mock) -> None:
     response = await agent.run(mock_tool_manager, run_metadata)
 
     assert response == mock_response
-    assert agent.token_stats["actual_usage"] != {}
+    assert agent.state.get_token_stats()["actual_usage"] != {}
