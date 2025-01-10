@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, List, Union, Callable, Optional
+from typing import Any, Dict, Union, Callable, Optional
 
 from .utils import DebugUtils, console_utils
 from ._agent import Agent
@@ -21,6 +21,7 @@ from .schemas.event_message import (
     MessagePayload,
     EventMessageType,
 )
+from .agent.agent_manager_state import AgentManagerState, AgentManagerStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -46,115 +47,159 @@ class AgentManager:
         self.execute_run_task: Optional[asyncio.Task] = None
         self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
+        self.state_manager = AgentManagerStateManager()
+
+    async def on_message_received(self, message: EventMessage) -> None:
+        """Handle incoming messages from services."""
+        logger.debug(f"on_message_received: {message}")
+        if not self.active_agent:
+            logger.warning("No active agent to handle message")
+            return
+
+        if message.type == EventMessageType.USER:
+            await self.user_message_queue.put(message.payload.text)
+        else:
+            await self.active_agent.add_message(
+                MessageParam(
+                    role="assistant" if message.type == EventMessageType.ASSISTANT else "user",
+                    content=message.payload.text,
+                    name=message.payload.name,
+                )
+            )
 
     async def initialize(
         self, run_metadata: Optional[RunMetadata] = RunMetadata(), mcp: Optional[MCPServerManager] = None
     ):
-        logger.debug(f"initialize mode: {run_metadata.mode}")
-        self.run_metadata = run_metadata
-        self.mcp = mcp
-        if self.primary_agent:
-            feature_flag = self.primary_agent.config.feature_flag
-        else:
-            feature_flag = FeatureFlag()
+        """Initialize the agent manager with proper state management."""
+        try:
+            if not self.state_manager.can_initialize():
+                raise RuntimeError(f"Cannot initialize in {self.state_manager.state} state")
 
-        if feature_flag.enable_services or run_metadata.mode in "client":
-            self.service_manager = await ServiceManager.create(
-                run_metadata=self.run_metadata,
-                feature_flag=feature_flag,
-                on_message_received=self.on_message_received,
-                agent=self.primary_agent.config,
-            )
-            await self.service_manager.connect()
+            self.state_manager.start_initialization()
+            logger.debug(f"initialize mode: {run_metadata.mode}")
+            self.run_metadata = run_metadata
+            self.mcp = mcp
 
-        # Update other agents info once we set primary agent
-        self._update_other_agents_info()
-        await self.initialize_run()
+            if self.primary_agent:
+                feature_flag = self.primary_agent.config.feature_flag
+            else:
+                feature_flag = FeatureFlag()
+
+            if feature_flag.enable_services or run_metadata.mode in "client":
+                self.service_manager = await ServiceManager.create(
+                    run_metadata=self.run_metadata,
+                    feature_flag=feature_flag,
+                    on_message_received=self.on_message_received,
+                    agent=self.primary_agent.config,
+                )
+                await self.service_manager.connect()
+
+            self._update_other_agents_info()
+            await self.initialize_run()
+
+            self.state_manager.complete_initialization()
+            self.state_manager.metrics.update_active_agents(len(self._agents))
+        except Exception as e:
+            logger.error(f"Initialization failed: {e}")
+            self.state_manager.complete_initialization(error=e)
+            raise
 
     async def clean_up(self):
-        if self.service_manager:
-            await self.service_manager.close()
+        """Clean up resources with state tracking."""
+        self.state_manager.state = AgentManagerState.CLEANING
+        try:
+            if self.service_manager:
+                await self.service_manager.close()
 
-        cleanup_tasks = []
-        for agent_id in list(self._agents.keys()):
-            try:
-                if hasattr(self._agents[agent_id], "clean_up"):
-                    cleanup_tasks.append(asyncio.create_task(self._agents[agent_id].clean_up()))
-            except Exception as e:
-                logger.error(f"Error cleaning up agent {agent_id}: {e}")
+            cleanup_tasks = []
+            for agent_id in list(self._agents.keys()):
+                try:
+                    if hasattr(self._agents[agent_id], "clean_up"):
+                        cleanup_tasks.append(asyncio.create_task(self._agents[agent_id].clean_up()))
+                except Exception as e:
+                    logger.error(f"Error cleaning up agent {agent_id}: {e}")
+                    self.state_manager.metrics.record_error(e)
 
-        if cleanup_tasks:
-            await asyncio.gather(*cleanup_tasks, return_exceptions=True)
+            if cleanup_tasks:
+                await asyncio.gather(*cleanup_tasks, return_exceptions=True)
 
-        self._agents.clear()
-        self.primary_agent = None
-        self.active_agent = None
-        logger.info("All agents cleaned up and removed.")
-
-    async def initialize_run(self):
-        if not self.tool_manager:
-            self.tool_manager = ToolManager(service_manager=self.service_manager, mcp=self.mcp)
+            self._agents.clear()
+            self.primary_agent = None
+            self.active_agent = None
+            self.state_manager.metrics.update_active_agents(0)
+            logger.info("All agents cleaned up and removed.")
+        except Exception as e:
+            logger.error(f"Cleanup failed: {e}")
+            self.state_manager.metrics.record_error(e)
+            raise
+        finally:
+            self.state_manager.state = AgentManagerState.UNINITIALIZED
 
     async def start_run(
         self,
         active_agent_id: str,
         message: str,
         run_metadata: RunMetadata,
-        callback: Optional[Callable[[CompletionResponse], Any]] = None,
-    ) -> Optional[CompletionResponse]:
-        """Start a run triggered by user."""
-        if run_metadata:
-            self.run_metadata = run_metadata
-        self.run_metadata.current_turn = 0  # reset current turn since it's user input
-        self.active_agent = self._agents[active_agent_id]
-        self.active_agent.set_service_manager(self.service_manager)
-        # Start execute_run if not already running
-        if not callback:
-            callback = self.handle_response
-        # Directly add message to the agent's message history
-        if message:
-            user_message = MessageParam(role="user", content=message, model=self.active_agent.config.model)
-            message = await self.active_agent.add_message(user_message)
-            await callback(message)
-        logger.debug(f"run - queued message for agent {active_agent_id}: {message}")
+        callback: Optional[Callable[[Union[CompletionResponse, MessageParam]], Any]] = None,
+    ) -> Optional[Union[CompletionResponse, MessageParam]]:
+        """Start a run with state management and metrics."""
+        try:
+            if not self.state_manager.can_start_run():
+                raise RuntimeError(f"Cannot start run in {self.state_manager.state} state")
 
-        if self.run_metadata.mode == "runner":
-            # in runner mode, it should be called once
-            if not self.execute_run_task or self.execute_run_task.done():
-                self.execute_run_task = asyncio.create_task(self._execute_run(callback))
-            return
-        # if in cli or test mode, return final response to the end "user"
-        return await self._execute_run(callback)
+            self.state_manager.start_run()
+
+            if run_metadata:
+                self.run_metadata = run_metadata
+            self.run_metadata.current_turn = 0
+
+            if active_agent_id not in self._agents:
+                error = ValueError(f"Agent {active_agent_id} not found")
+                self.state_manager.stop_run(error=error)  # Record this initialization error
+                raise error
+
+            self.active_agent = self._agents[active_agent_id]
+            self.active_agent.set_service_manager(self.service_manager)
+
+            if not callback:
+                callback = self.handle_response
+
+            if message:
+                user_message = MessageParam(role="user", content=message, model=self.active_agent.config.model)
+                message = await self.active_agent.add_message(user_message)
+                await callback(message)
+
+            logger.debug(f"run - queued message for agent {active_agent_id}: {message}")
+
+            if self.run_metadata.mode == "runner":
+                if not self.execute_run_task or self.execute_run_task.done():
+                    self.execute_run_task = asyncio.create_task(self._execute_run(callback))
+                return None
+
+            try:
+                return await self._execute_run(callback)
+            except Exception as e:
+                logger.error(f"Failed to start run: {e}")
+                # Don't record error here since it's already recorded in _execute_run
+                raise
+        except Exception as e:
+            logger.error(f"Failed to start run: {e}")
+            if not isinstance(e, ValueError):  # Only record if it's not already recorded
+                self.state_manager.stop_run(error=e)
+            raise
 
     async def _execute_run(
         self,
         callback: Optional[Callable[[CompletionResponse], Any]] = None,
     ) -> Optional[CompletionResponse]:
-        """
-        Main execution loop for handling agent tasks and transfers between agents.
-
-        This method orchestrates the agent execution flow, allowing agents to:
-        1. Execute their primary task
-        2. Process tool calls and their results
-        3. Transfer control to other agents when needed
-
-        The loop continues running as long as:
-        - An agent transfer occurs (switching to a new active agent)
-
-        The loop terminates and returns the final response when:
-        - The active agent completes its task (no more tool calls)
-        - An error occurs
-        - A stop signal is received
-
-        Args:
-            callback: Optional function to process agent responses during execution
-
-        Returns:
-            CompletionResponse: The final response from the last active agent
-        """
+        """Execute run with improved error handling and metrics."""
         logger.debug(f"execute_run loop started. run_metadata: {self.run_metadata.model_dump_json(indent=4)}")
         try:
             while True:
+                if self.state_manager.should_stop():
+                    logger.info("Run stopping due to state change")
+                    break
+
                 response = await self.agent_loop.run(
                     agent=self.active_agent,
                     run_metadata=self.run_metadata,
@@ -162,135 +207,80 @@ class AgentManager:
                     prompt_callback=self.prompt_callback,
                     tool_manager=self.tool_manager,
                 )
+
                 if isinstance(response, AgentTransfer):
                     if response.run_metadata:
                         logger.debug(
-                            f"handle tansfer to {response.to_agent_id}, run metadata: {self.run_metadata.model_dump_json(indent=4)}"
+                            f"handle transfer to {response.to_agent_id}, run metadata: {self.run_metadata.model_dump_json(indent=4)}"
                         )
                     await self._handle_transfer(response)
                     continue
+
+                self.state_manager.stop_run()
                 return response
         except Exception as e:
-            logger.error(f"Ran into error for agent loop: {e}")
-
-    async def stop_run(self):
-        """Signal the execute_run loop to stop gracefully."""
-        if self.execute_run_task and not self.execute_run_task.done():
-            logger.info("Stopping the ongoing run...")
-            self.stop_run_event.set()
-            try:
-                await self.execute_run_task
-            except asyncio.CancelledError:
-                logger.info("execute_run_task was cancelled.")
-            finally:
-                self.execute_run_task = None
-                self.stop_run_event.clear()
-                logger.info("Run has been stopped.")
-        else:
-            logger.info("No active run to stop.")
+            logger.error(f"Run execution error: {e}")
+            self.state_manager.stop_run(error=e)
+            raise
 
     async def _handle_transfer(self, agent_transfer: AgentTransfer) -> None:
-        """Process agent transfer by updating active agent and transferring context.
+        """Handle agent transfer with metrics and validation."""
+        try:
+            from_agent_id = self.active_agent.id
+            to_agent_id = agent_transfer.to_agent_id
 
-        Args:
-            agent_transfer: Contains target agent ID and context to transfer
+            if agent_transfer.transfer_to_primary:
+                to_agent_id = self.primary_agent.id
+                agent_transfer.to_agent_id = to_agent_id
 
-        The method clears previous memory and transfers either single or list context
-        to the new active agent.
-        """
-        if agent_transfer.transfer_to_primary:
-            agent_transfer.to_agent_id = self.primary_agent.id
+            if to_agent_id not in self._agents:
+                error_msg = (
+                    f"Target agent '{to_agent_id}' not found. Available agents: {', '.join(self._agents.keys())}"
+                )
+                logger.error(error_msg)
+                self.state_manager.metrics.record_transfer(
+                    from_agent=from_agent_id, to_agent=to_agent_id, success=False, error=error_msg
+                )
+                await self.active_agent.add_message(MessageParam(role="user", content=error_msg))
+                return
 
-        if agent_transfer.to_agent_id not in self._agents:
-            available_agents = ", ".join(self._agents.keys())
-            error_msg = f"Target agent '{agent_transfer.to_agent_id}' not found. Transfer to primary: {agent_transfer.transfer_to_primary}. Available agents: {available_agents}"
-            await self.active_agent.add_message(MessageParam(role="user", content=error_msg))
-            logger.error(error_msg)
-            return
-
-        messages = []
-        from_agent_id = self.active_agent.id
-        agent_transfer.context = self.active_agent.build_context_for_next_agent(
-            max_messages=agent_transfer.max_messages
-        )
-
-        if agent_transfer.context:
-            context_message = MessageParam(
-                role="assistant",
-                content=f"Here is context from {from_agent_id} <background>{agent_transfer.context}</background>",
-            )
-            messages.append(context_message)
-
-        transfer_message = MessageParam(role="assistant", content=agent_transfer.message, name=from_agent_id)
-        messages.append(transfer_message)
-
-        self.active_agent = self._agents[agent_transfer.to_agent_id]
-        await self.active_agent.add_messages(messages)
-        DebugUtils.take_snapshot(
-            messages=messages,
-            suffix=f"transfer_to_{self.active_agent.id}_{self.active_agent.config.model}",
-            with_timestamp=True,
-            subfolder="transfer",
-        )
-        self.active_agent.conversation_context = ConversationContext(
-            participants=[from_agent_id, agent_transfer.to_agent_id]
-        )
-
-    async def broadcast_response(self, completion_response: CompletionResponse):
-        logger.debug("broadcast assistant message")
-        if not self.service_manager:
-            return
-        await self.service_manager.send_message_to_user(completion_response)
-
-    async def broadcast_user_message(self, user_input: str) -> None:
-        """Broadcast user message through websocket"""
-        if not self.service_manager:
-            logger.debug("services is not enabled")
-        logger.debug(f"broadcast user message: {user_input}")
-        await self.service_manager.send_message_to_assistant(user_input)
-
-    async def on_message_received(self, event: EventMessage) -> None:
-        """Receive message from websocket"""
-        current_client_id = self.service_manager.client_id
-        if event.type == EventMessageType.USER and event.client_id != current_client_id:
-            # Anthropic uses "user" role for tool result.
-            # We only use USER type only when the user sends the message directly, not tool result message
-            if isinstance(event.payload, MessagePayload):
-                user_message = event.payload.message
-                self.console_utils.print_msg(user_message, "user")
-                if self.execute_run_task and not self.execute_run_task.done():
-                    # Inject the message dynamically
-                    await self.inject_user_message(user_message)
-                    logger.debug("handle_message - User message injected dynamically.")
-                else:
-                    # Start a new run
-                    logger.debug("handle_message - User message queued for processing.")
-                    self.run_metadata.user_messages.append(user_message)
-                    await self.start_run(
-                        self.active_agent.id, user_message, self.run_metadata, callback=self.handle_response
-                    )
-            else:
-                logger.debug(f"Receive unexpected event: {event}")
-        elif event.type == EventMessageType.ASSISTANT and event.client_id != current_client_id:
-            logger.debug(f"handle_message receive assistant message: {event.model_dump_json(indent=4)}")
-            if isinstance(event.payload, MessagePayload):
-                message = event.payload.message
-                self.console_utils.print_msg(message)
-        else:
-            logger.debug(
-                f"Skip handle_message current_client_id {current_client_id}: {event.model_dump_json(indent=4)}"
+            messages = []
+            agent_transfer.context = self.active_agent.build_context_for_next_agent(
+                max_messages=agent_transfer.max_messages
             )
 
-    async def handle_response(self, response: Union[CompletionResponse, MessageParam]):
-        self.console_utils.print_msg(f"{response.get_text()}")
-        await self.broadcast_response(response)
+            if agent_transfer.context:
+                context_message = MessageParam(
+                    role="assistant",
+                    content=f"Here is context from {from_agent_id} <background>{agent_transfer.context}</background>",
+                )
+                messages.append(context_message)
 
-    async def inject_user_message(self, user_input: str) -> None:
-        """Inject a user message into the ongoing run."""
-        logger.debug(f"Injecting user message: {user_input}")
-        await self.user_message_queue.put(user_input)
+            transfer_message = MessageParam(role="assistant", content=agent_transfer.message, name=from_agent_id)
+            messages.append(transfer_message)
+
+            self.active_agent = self._agents[to_agent_id]
+            await self.active_agent.add_messages(messages)
+
+            DebugUtils.take_snapshot(
+                messages=messages,
+                suffix=f"transfer_to_{self.active_agent.id}_{self.active_agent.config.model}",
+                with_timestamp=True,
+                subfolder="transfer",
+            )
+
+            self.active_agent.conversation_context = ConversationContext(participants=[from_agent_id, to_agent_id])
+
+            self.state_manager.metrics.record_transfer(from_agent=from_agent_id, to_agent=to_agent_id, success=True)
+        except Exception as e:
+            logger.error(f"Transfer error: {e}")
+            self.state_manager.metrics.record_transfer(
+                from_agent=from_agent_id, to_agent=to_agent_id, success=False, error=str(e)
+            )
+            raise
 
     def register_agent(self, config: AgentConfig) -> Agent:
+        """Register agent with metrics tracking."""
         if config.id in self._agents:
             logger.warning(f"Agent with id {config.id} already exists, returning existing agent.")
             return self._agents[config.id]
@@ -300,9 +290,16 @@ class AgentManager:
         logger.info(
             f"register_agent {agent.config.id} (name: {config.id}), tool: {config.tools} available agents: {list(self._agents.keys())}"
         )
+
         if config.is_primary:
             self.primary_agent = agent
+
+        self.state_manager.metrics.update_active_agents(len(self._agents))
         return agent
+
+    def get_metrics(self) -> dict:
+        """Get current metrics."""
+        return self.state_manager.get_metrics()
 
     def _update_other_agents_info(self):
         """Update each agent with information about other available agents."""
@@ -316,15 +313,23 @@ class AgentManager:
         if identifier in self._agents:
             return self._agents[identifier]
 
-        for agent in self._agents.values():
-            if agent.config.id == identifier:
-                return agent
+    async def initialize_run(self):
+        """Initialize run state."""
+        self.stop_run_event.clear()
+        if not self.run_metadata:
+            self.run_metadata = RunMetadata()
 
-        raise Exception(f"Agent '{identifier}' not found")
+    async def handle_response(self, response: Union[CompletionResponse, MessageParam]) -> None:
+        """Handle agent response during run."""
+        if not response:
+            return
 
-    def list_agents(self, exclude: List[str] = []) -> List[dict[str, str]]:
-        return [
-            {"id": agent.id, "description": agent.description}
-            for agent in self._agents.values()
-            if agent.id not in exclude
-        ]
+        # Update to handle both MessageParam and CompletionResponse
+        if self.service_manager:
+            text_content = response.content if isinstance(response, MessageParam) else response.text
+            if text_content:
+                event_message = EventMessage(
+                    type=EventMessageType.ASSISTANT,
+                    payload=MessagePayload(text=text_content),
+                )
+                await self.service_manager.send_message(event_message)
