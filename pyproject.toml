@@ -44,12 +44,8 @@ dependencies = [
     "mcp==1.1.0",
 ]
 
-[project.scripts]
-cue = "cue.cli:main"
-
-[tool.rye]
-managed = true
-dev-dependencies = [
+[project.optional-dependencies]
+dev = [
     "pyright>=1.1.370",
     "mypy>=1.10.1",
     "ruff>=0.5.0",
@@ -57,17 +53,8 @@ dev-dependencies = [
     "pytest-asyncio>=0.24.0",
 ]
 
-[tool.rye.scripts]
-format = { chain = ["format:ruff", "fix:ruff", "format:ruff"] }
-"format:ruff" = "ruff format ."
-
-lint = { chain = ["check:ruff"] }
-"check:ruff" = "ruff check ."
-"fix:ruff" = "ruff check --fix ."
-test = "pytest"
-
-[tool.black]
-line-length = 120
+[project.scripts]
+cue = "cue.cli:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -107,7 +94,6 @@ ignore = [
     "UP035", # Ignore use of Dict or List
     "UP038", # Ignore (X, Y)
 ]
-
 
 [tool.ruff.lint.isort]
 length-sort = true

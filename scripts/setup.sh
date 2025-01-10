@@ -4,20 +4,36 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-# Function to check if Rye is installed
-check_rye_installed() {
-    if ! command -v rye &> /dev/null; then
-        echo "Rye is not installed. Installing Rye..."
-        curl -sSf https://rye.astral.sh/get | bash
-        echo 'source "$HOME/.rye/env"' >> ~/.bash_profile
+# Function to check if UV is installed
+check_uv_installed() {
+    if ! command -v uv &> /dev/null; then
+        echo "UV is not installed. Installing UV..."
+        curl -LsSf https://astral.sh/uv/install.sh | bash
+
+        # Add UV to PATH if not already there
+        if [[ ":$PATH:" != *":$HOME/.cargo/bin:"* ]]; then
+            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bash_profile
+            export PATH="$HOME/.cargo/bin:$PATH"
+        fi
     else
-        echo "Rye is already installed."
+        echo "UV is already installed."
     fi
 }
 
-check_rye_installed
+# Check and install UV
+check_uv_installed
 
-rye config --set-bool behavior.use-uv=true
+# Create virtual environment if it doesn't exist
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    uv venv
+fi
 
-# Sync dependencies
-rye sync --all-features
+# Activate virtual environment
+source .venv/bin/activate
+
+echo "Installing dependencies..."
+# Install both main and dev dependencies
+uv pip install -e ".[dev]"
+
+echo "Setup complete! Virtual environment is activated."

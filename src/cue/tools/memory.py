@@ -87,7 +87,7 @@ class MemoryTool(BaseTool):
         elif command == "delete":
             return await self.delete(memory_id)
         raise ToolError(
-            f'Unrecognized command {command}. The allowed commands for the {self.name} tool are: {", ".join(get_args(Command))}'
+            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
         )
 
     async def view(self, memory_id: Optional[str] = None, limit: Optional[int] = 10) -> ToolResult:
@@ -218,5 +218,5 @@ class MemoryTool(BaseTool):
             # Format the error message based on whether it was a single or bulk deletion
             id_str = memory_id if isinstance(memory_id, str) else ", ".join(memory_id)
             raise ToolError(
-                f"Failed to delete memory{'ies' if isinstance(memory_id, list) else ''} " f"({id_str}): {str(e)}"
+                f"Failed to delete memory{'ies' if isinstance(memory_id, list) else ''} ({id_str}): {str(e)}"
             )

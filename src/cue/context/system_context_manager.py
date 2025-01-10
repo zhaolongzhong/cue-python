@@ -30,7 +30,7 @@ class SystemContextManager:
     def _get_time_context(self) -> str:
         return f"""
         * Time Awareness:
-        - Recent Time: {datetime.today().strftime('%A, %B %-d, %Y %I:%M %p %Z')}
+        - Recent Time: {datetime.today().strftime("%A, %B %-d, %Y %I:%M %p %Z")}
         - Note: This timestamp is for general context and system self-awareness only
         - Limitations: May have delay due to context caching
         - For precise time: Use bash tool with 'date' command or other available tool

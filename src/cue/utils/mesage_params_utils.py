@@ -147,7 +147,7 @@ def get_text_from_message_params_openai(
         text = ""
         if role == "user":
             if is_tool_result(msg):
-                text += f"name: {msg.get('name','')}, role: tool, tool_call_id: {msg.get('tool_call_id')}"
+                text += f"name: {msg.get('name', '')}, role: tool, tool_call_id: {msg.get('tool_call_id')}"
                 text += truncate_safely(msg.get("content"), content_max_length)
             else:
                 if isinstance(msg.get("content"), str):

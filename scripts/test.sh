@@ -111,7 +111,7 @@ run_pytest() {
   echo "Running $test_type tests ..."
   # Use set +e to prevent script from exiting if pytest returns non-zero
   set +e
-  rye run pytest --ignore="backend" $pytest_args $extra_args
+  uv run pytest --ignore="backend" $pytest_args $extra_args
   local exit_code=$?
   set -e
   
@@ -135,6 +135,7 @@ fi
 
 # Run integration tests if flagged
 if $RUN_INTEGRATION; then
+load_env ".env.test"
   run_pytest "integration" "$PYTEST_ARGS" "-m integration"
 fi
 

@@ -158,9 +158,7 @@ class AgentProvider:
             if tool_key in tool_map:
                 tools.append(tool_map[tool_key])
             else:
-                logger.warning(
-                    f"Unknown tool '{tool_name}', skipping. " f"Available tools: {', '.join(tool_map.keys())}"
-                )
+                logger.warning(f"Unknown tool '{tool_name}', skipping. Available tools: {', '.join(tool_map.keys())}")
 
         logger.info(f"config_dict: {config_dict}")
         return AgentConfig(

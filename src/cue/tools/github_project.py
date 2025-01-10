@@ -222,7 +222,7 @@ class GitHubProjectTool(BaseTool):
                 return ToolResult(output=self._format_items([item], project_number))
 
             raise ToolError(
-                f'Unrecognized command {command}. The allowed commands for the {self.name} tool are: {", ".join(get_args(Command))}'
+                f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
             )
 
         except Exception as e:

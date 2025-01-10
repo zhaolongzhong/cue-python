@@ -32,6 +32,6 @@ echo "Error: OPENAI_API_KEY is not set. Please set it in the .env file or as an 
 exit 1
 fi
 
-rye run pytest -s evals
+uv run pytest -s evals
 
 echo "All requested tests have been executed successfully."

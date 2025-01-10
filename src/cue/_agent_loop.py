@@ -167,10 +167,10 @@ class AgentLoop:
 
     async def _should_continue_run(self, run_metadata: RunMetadata, prompt_callback: Optional[Callable] = None) -> bool:
         """Determines if the loop should continue based on turn count and user input."""
-        logger.debug(f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn-1}")
+        logger.debug(f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn - 1}")
         if run_metadata.enable_turn_debug and prompt_callback:
             user_response = await prompt_callback(
-                f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn-1}. Debug. Continue? (y/n, press Enter to continue): "
+                f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn - 1}. Debug. Continue? (y/n, press Enter to continue): "
             )
             if user_response.lower() not in ["y", "yes", ""]:
                 logger.warning("Stopped by user.")

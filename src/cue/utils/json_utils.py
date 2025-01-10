@@ -40,7 +40,7 @@ def _decode_json(line, path, line_number):
         return json.loads(line)
     except json.JSONDecodeError as e:
         custom_error_message = (
-            f"Error parsing JSON on line {line_number}: {e.msg} at" f" {path}:{line_number}:{e.colno}, line: {line}"
+            f"Error parsing JSON on line {line_number}: {e.msg} at {path}:{line_number}:{e.colno}, line: {line}"
         )
         logger.error(custom_error_message)
         raise ValueError(custom_error_message) from None

@@ -41,8 +41,8 @@ class TestBrowseTool:
             # Content-specific assertions
             key_terms = self.get_key_terms()
             found_terms = [term for term in key_terms if term.lower() in response.lower()]
-            assert (
-                len(found_terms) >= 1
-            ), f"Response should contain at least 1 key terms. Found: {found_terms}. Original response: {response}"
+            assert len(found_terms) >= 1, (
+                f"Response should contain at least 1 key terms. Found: {found_terms}. Original response: {response}"
+            )
         finally:
             await client.cleanup()

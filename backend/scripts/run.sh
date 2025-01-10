@@ -33,4 +33,4 @@ else
     echo "No process running on port 8000"
 fi
 
-ENVIRONMENT=$ENVIRONMENT rye run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+ENVIRONMENT=$ENVIRONMENT uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

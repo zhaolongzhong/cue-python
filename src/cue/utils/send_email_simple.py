@@ -47,7 +47,7 @@ def send_email(content, email_list: list[str]):
 
 
 def main():
-    # rye run python src/utils/email_utils.py
+    # uv run python src/utils/email_utils.py
     send_email("Hello World", ["hello@example.com"])
 
 

@@ -6,4 +6,5 @@ cd "$(dirname "$0")/.."
 pwd
 
 echo "Running lint ..."
-rye run lint
+
+uv run ruff check .

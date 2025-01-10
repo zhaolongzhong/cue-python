@@ -10,7 +10,7 @@
 
 - Docker & Docker Compose
 - Python 3.10+
-- Rye package manager
+- UV package manager
 - OpenAI API Key
 
 ## Setup
@@ -39,7 +39,7 @@
 3. **Database Initialization**
 
    ```bash
-   rye sync
+   uv sync
    source .venv/bin/activate
    alembic upgrade head
    ```

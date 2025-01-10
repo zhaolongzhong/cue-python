@@ -106,5 +106,5 @@ class ParameterValidator:
         """
         if not result.is_valid and result.error_message:
             logger.warning(
-                f"Parameter validation failed for {param_name}: {result.error_message}. " f"Using value: {result.value}"
+                f"Parameter validation failed for {param_name}: {result.error_message}. Using value: {result.value}"
             )

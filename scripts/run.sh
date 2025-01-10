@@ -12,6 +12,6 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Run the rye command, it runs src.cue.cli._cli_async
-# rye run cue -r
-rye run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r
+# Run with uv command, it runs src.cue.cli._cli_async
+# uv run cue -r
+uv run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r

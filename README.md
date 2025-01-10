@@ -32,8 +32,9 @@ Run the setup script to install dependencies and ensure your environment is read
 
 This script will:
 
-- Check if Rye is installed and install it if necessary.
-- Configure Rye and sync project dependencies.
+- Install UV if not already installed
+- Create and activate a virtual environment
+- Install all project dependencies
 
 ### Step 3: Set Up API Keys
 
@@ -62,13 +63,7 @@ cd backend/
 ./scripts/run.sh
 ```
 
-Start the command line:
-
-```bash
-rye run cue -r
-```
-
-or activiate virtual environment and run `cue` command directly.
+Start the command line by first activating the virtual environment:
 
 ```bash
 source .venv/bin/activate
@@ -167,7 +162,8 @@ The [environment](environment/README.md) package provides a standalone setup for
 To build the package, run:
 
 ```bash
-rye build
+uv sync
+uv build
 ```
 
 This command will generate distribution files in the `dist` directory, such as:

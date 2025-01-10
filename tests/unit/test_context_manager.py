@@ -238,9 +238,9 @@ class TestDynamicContextManager:
                 tool_result_ids_present.add(msg["tool_call_id"])
 
         # Verify that all present tool calls have their results and vice versa
-        assert (
-            tool_call_ids_present == tool_result_ids_present
-        ), f"Mismatch between tool calls {tool_call_ids_present} and results {tool_result_ids_present}"
+        assert tool_call_ids_present == tool_result_ids_present, (
+            f"Mismatch between tool calls {tool_call_ids_present} and results {tool_result_ids_present}"
+        )
 
         # Test Case 3: Force removal of all tool sequences
         # Add many messages to force removal of all tool sequences

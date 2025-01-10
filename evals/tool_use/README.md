@@ -20,7 +20,7 @@ cd evals/tool_use
 Alternatively, you can run these commands manually:
 
 ```bash
-rye build
+uv build
 cp dist/*.whl evals/tool_use/assets
 ```
 

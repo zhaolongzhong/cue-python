@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/../.."
 
 # Build the .whl file
-rye build
+uv build
 
 # Find the generated .whl file dynamically
 WHL_FILE=$(ls dist/*.whl | head -n 1)
@@ -25,4 +25,4 @@ fi
 cd evals/tool_use
 
 # Run the evaluation script
-rye run python -m run_evals
+uv run python -m run_evals

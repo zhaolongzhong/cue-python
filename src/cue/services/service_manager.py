@@ -48,7 +48,7 @@ class ServiceManager:
         self.run_metadata = run_metadata
         self.feature_flag = feature_flag
         self.base_url = base_url
-        self.api_key = agent.api_key
+        self.api_key = agent.api_key if agent else None
         self.agent = agent
         self.overwrite_agent_config: Optional[AgentConfig] = None
         self.assistant_id: Optional[str] = agent.id if agent else None

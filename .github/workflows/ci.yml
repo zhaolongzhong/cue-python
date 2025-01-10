@@ -15,19 +15,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rye
-        run: |
-          curl -sSf https://rye.astral.sh/get | bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
-        env:
-          RYE_VERSION: 0.35.0
-          RYE_INSTALL_OPTION: "--yes"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
 
-      - name: Install dependencies
-        run: rye sync --all-features
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | bash
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Create venv and install dependencies
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -e ".[dev]"
 
       - name: Run lints
         run: ./scripts/lint.sh
+
   test:
     name: test
     runs-on: ubuntu-latest
@@ -35,13 +41,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Rye
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install UV
         run: |
-          curl -sSf https://rye.astral.sh/get | bash
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
-        env:
-          RYE_VERSION: 0.35.0
-          RYE_INSTALL_OPTION: "--yes"
+          curl -LsSf https://astral.sh/uv/install.sh | bash
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: Setup
         run: ./scripts/setup.sh

@@ -122,9 +122,9 @@ class TestMemoryClient:
         assert len(retrieved_memories) > 0, "Should find at least one relevant memory"
 
         # Verify the most relevant memory is returned first
-        assert any(
-            "Python" in memory.content for memory in retrieved_memories
-        ), "Should find memory about Python programming"
+        assert any("Python" in memory.content for memory in retrieved_memories), (
+            "Should find memory about Python programming"
+        )
 
         # Test empty query handling
         # empty_query = "nonexistent content xyz123"
