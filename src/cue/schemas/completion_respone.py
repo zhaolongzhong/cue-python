@@ -8,12 +8,12 @@ from anthropic.types import (
 )
 from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall, ChatCompletionAssistantMessageParam
 from anthropic.types.beta import (
+    BetaMessage,
     BetaTextBlock,
     BetaMessageParam,
     BetaTextBlockParam,
     BetaToolUseBlockParam,
 )
-from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
 
 from ..schemas.error import ErrorResponse
 from ..schemas.message import Author, Content, Metadata, MessageCreate
@@ -64,7 +64,7 @@ class CompletionResponse:
         self.metadata = metadata
 
     def get_id(self) -> str:
-        if isinstance(self.response, (AnthropicMessage, PromptCachingBetaMessage)):
+        if isinstance(self.response, (AnthropicMessage, BetaMessage)):
             return self.response.id
         elif isinstance(self.response, ChatCompletion):
             return self.response.id
@@ -81,7 +81,7 @@ class CompletionResponse:
             else:
                 raise Exception("Unexpected response at CompletionResponse")
 
-        if isinstance(self.response, (AnthropicMessage, PromptCachingBetaMessage)):
+        if isinstance(self.response, (AnthropicMessage, BetaMessage)):
             return "\n".join(content.text for content in self.response.content if isinstance(content, TextBlock))
         elif isinstance(self.response, ChatCompletion):
             return self.response.choices[0].message.content
@@ -90,7 +90,7 @@ class CompletionResponse:
         )
 
     def get_tool_calls(self) -> Optional[list[Any]]:
-        if isinstance(self.response, (AnthropicMessage, PromptCachingBetaMessage)):
+        if isinstance(self.response, (AnthropicMessage, BetaMessage)):
             tool_calls = [
                 content_item for content_item in self.response.content if isinstance(content_item, ToolUseBlock)
             ]
@@ -165,7 +165,7 @@ class CompletionResponse:
         if self.response is None:
             return None
 
-        if isinstance(self.response, (AnthropicMessage, PromptCachingBetaMessage)):
+        if isinstance(self.response, (AnthropicMessage, BetaMessage)):
             return CompletionUsage(**self.response.usage.model_dump())
         elif isinstance(self.response, ChatCompletion):
             usage = self.response.usage
@@ -188,7 +188,7 @@ class CompletionResponse:
         response = self.response
         error = self.error
         if "claude" in self.model:
-            if isinstance(response, (AnthropicMessage, PromptCachingBetaMessage)):
+            if isinstance(response, (AnthropicMessage, BetaMessage)):
                 content = self._response_to_anthropic_params(response)
                 # Server can retrun empty content or array like `"content": []`
                 # Check for empty content (None, empty array, or empty string)
@@ -213,8 +213,8 @@ class CompletionResponse:
         error = self.error
 
         if "claude" in self.model:
-            if isinstance(response, (AnthropicMessage, PromptCachingBetaMessage)):
-                if isinstance(response, PromptCachingBetaMessage):
+            if isinstance(response, (AnthropicMessage, BetaMessage)):
+                if isinstance(response, BetaMessage):
                     author = Author(role=response.role)
                     metadata = Metadata(model=response.model, payload=response.model_dump())
                     original = response.content
@@ -264,7 +264,7 @@ class CompletionResponse:
 
     def _response_to_anthropic_params(
         self,
-        response: Union[AnthropicMessage, PromptCachingBetaMessage],
+        response: Union[AnthropicMessage, BetaMessage],
     ) -> list[Union[BetaTextBlockParam, BetaToolUseBlockParam]]:
         res: list[Union[BetaTextBlockParam, BetaToolUseBlockParam]] = []
         for block in response.content:

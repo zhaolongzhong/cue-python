@@ -5,7 +5,7 @@ from typing import Optional
 
 import anthropic
 from anthropic.types import ToolUseBlock
-from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
+from anthropic.types.beta import BetaMessage
 
 from ..utils import DebugUtils, TokenCounter
 from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
@@ -89,7 +89,7 @@ class AnthropicClient:
             )
             DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
             if request.tool_json:
-                response = await self.client.with_options(max_retries=2).beta.prompt_caching.messages.create(
+                response = await self.client.with_options(max_retries=2).beta.messages.create(
                     model=request.model,
                     system=system_messages,
                     messages=messages,
@@ -101,7 +101,7 @@ class AnthropicClient:
                 )
 
             else:
-                response = await self.client.with_options(max_retries=2).beta.prompt_caching.messages.create(
+                response = await self.client.with_options(max_retries=2).beta.messages.create(
                     model=request.model,
                     system=system_messages,
                     messages=messages,
@@ -177,9 +177,7 @@ class AnthropicClient:
                     content[-1].pop("cache_control", None)  # Remove existing cache_control
                     break  # Stop processing older messages
 
-    def replace_tool_call_ids(
-        self, response_data: Optional[PromptCachingBetaMessage]
-    ) -> Optional[PromptCachingBetaMessage]:
+    def replace_tool_call_ids(self, response_data: Optional[BetaMessage]) -> Optional[BetaMessage]:
         """
         Replace tool call IDs in the response to:
         1) Ensure uniqueness by generating new IDs from the server if duplicates exist.
