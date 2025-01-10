@@ -216,7 +216,7 @@ class Agent:
     def build_system_context(self) -> str:
         """Build short time static system context"""
         return self.system_context_manager.build_system_context(
-            project_context=self.project_context_manager.project_context,
+            project_context=self.project_context_manager.get_project_context(),
             memories=self.memory_manager.recent_memories,
             summaries=self.context.get_summaries(),
         )

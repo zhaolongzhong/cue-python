@@ -79,7 +79,6 @@ class OpenAIClient(LLMRequest):
                 }
                 logger.debug(
                     f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(system_message, indent=4)}"
-                    f"\ntools_json: {json.dumps(request.tool_json, indent=4)}"
                 )
                 messages.insert(0, system_message)
                 DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")

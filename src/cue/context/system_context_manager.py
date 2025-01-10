@@ -24,6 +24,7 @@ class SystemContextManager:
     async def update_base_context(self) -> None:
         self.system_context_base = self._get_time_context()
         system_context = await self.service_manager.assistants.get_system_context()
+        logger.info(f"update base system context: {system_context}")
         if system_context:
             self.system_context_base += f"<system_learning>{system_context}</system_learning>"
 

@@ -82,7 +82,6 @@ class AnthropicClient:
 
             logger.debug(
                 f"{self.config.id} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(base_system_message, indent=4)}"
-                f"\ntools_json: {json.dumps(request.tool_json, indent=4)}"
             )
             DebugUtils.debug_print_messages(
                 messages=messages, tag=f"{self.config.id} send_completion_request clean messages"

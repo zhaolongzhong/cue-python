@@ -38,7 +38,12 @@ class AssistantClient(ResourceClient):
     async def get_system_context(self) -> Optional[Union[dict, str]]:
         response = await self._http.request("GET", f"/assistants/{self._default_assistant_id}")
         asssistant = Assistant(**response)
-        return asssistant.metadata.system if asssistant.metadata else None
+        system_context = ""
+        if asssistant.metadata.instruction:
+            system_context = f"<user_set_context>{asssistant.metadata.instruction}</user_set_context>"
+        if asssistant.metadata.system:
+            system_context += f"<model_set_context>{asssistant.metadata.system}</model_set_context>"
+        return system_context
 
     async def update(self, assistant: AssistantUpdate) -> Assistant:
         response = await self._http.request(
