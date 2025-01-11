@@ -35,7 +35,6 @@ def test_init(task_manager):
     assert task_manager.task_messages == {}
     assert task_manager.task_state["status"] == "active"
     assert task_manager.task_state["current_goal"] is None
-    assert task_manager.task_state["error_context"] is None
 
 
 def test_truncate_center(task_manager):
@@ -50,11 +49,6 @@ def test_truncate_center(task_manager):
 
 def test_message_type_determination(task_manager):
     """Test message type classification"""
-    # Test error detection
-    error_msg = create_message("Got an error: file not found")
-    assert task_manager._determine_message_type(error_msg) == "ERROR_CONTEXT"
-    assert task_manager.task_state["status"] == "debugging"
-
     # Test goal detection
     goal_msg = create_message("The task goal is to implement feature X")
     assert task_manager._determine_message_type(goal_msg) == "TASK_GOAL"
@@ -75,10 +69,6 @@ def test_add_task_messages_preserves_goal_and_error(task_manager):
     goal_msg = create_message("Task goal: implement feature X", msg_id="goal_1")
     task_manager.add_task_messages([goal_msg])
 
-    # Add error context
-    error_msg = create_message("Error: test failed", msg_id="error_1")
-    task_manager.add_task_messages([error_msg])
-
     # Add new messages
     new_msgs = [create_message("Making progress", msg_id="prog_1"), create_message("Almost done", msg_id="prog_2")]
     task_manager.add_task_messages(new_msgs)
@@ -86,7 +76,6 @@ def test_add_task_messages_preserves_goal_and_error(task_manager):
     # Verify goal and error are preserved
     context = task_manager.get_formatted_task_context()
     assert "Task goal: implement feature X" in context
-    assert "Error: test failed" in context
 
 
 def test_token_limit_enforcement(task_manager):
@@ -124,7 +113,6 @@ def test_task_context_formatting(task_manager):
     # Check content
     assert "[TASK_GOAL]" in context
     assert "[TASK_PROGRESS]" in context
-    assert "[ERROR_CONTEXT]" in context
 
 
 def test_clear_task_context(task_manager):
@@ -138,7 +126,6 @@ def test_clear_task_context(task_manager):
 
     assert len(task_manager.task_messages) == 0
     assert task_manager.task_state["status"] == "completed"
-    assert task_manager.task_state["error_context"] is None
     assert task_manager.get_formatted_task_context() is None
 
 

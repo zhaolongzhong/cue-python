@@ -37,21 +37,35 @@ class SystemContextManager:
         - For precise time: Use bash tool with 'date' command or other available tool
         """
 
-    def build_system_context(self, project_context: str, memories: str, summaries: str) -> str:
+    def build_system_context(
+        self,
+        project_context: Optional[str] = None,
+        task_context: Optional[str] = None,
+        memories: Optional[str] = None,
+        summaries: Optional[str] = None,
+    ) -> str:
         """Build the system context."""
         new_system_context = self.system_context_base
 
         # Process project context
-        project_value, _ = self.update_stats("project", project_context, "project")
-        new_system_context += project_value if project_value else ""
+        if project_context:
+            project_value, _ = self.update_stats("project", project_context, "project")
+            new_system_context += project_value if project_value else ""
+
+        # Process task context
+        if task_context:
+            task_value, _ = self.update_stats("task", task_context, "task")
+            new_system_context += task_value if task_value else ""
 
         # Process recent memories
-        memories_value, _ = self.update_stats("memories", memories, "memories")
-        new_system_context += memories_value if memories_value else ""
+        if memories:
+            memories_value, _ = self.update_stats("memories", memories, "memories")
+            new_system_context += memories_value if memories_value else ""
 
         # Process message summaries
-        summaries_value, _ = self.update_stats("summaries", summaries, "summaries")
-        new_system_context += summaries_value if summaries_value else ""
+        if summaries:
+            summaries_value, _ = self.update_stats("summaries", summaries, "summaries")
+            new_system_context += summaries_value if summaries_value else ""
 
         # Update system context if changed
         if self.system_context != new_system_context:

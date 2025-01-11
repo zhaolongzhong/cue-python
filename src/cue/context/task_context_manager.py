@@ -2,6 +2,8 @@ import logging
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
+from cue.services.service_manager import ServiceManager
+
 from ..schemas import Message
 from ..utils.token_counter import TokenCounter
 from ..services.message_client import MessageClient
@@ -29,12 +31,15 @@ class TaskContextManager:
             "status": "active",  # active, debugging, completed, paused
             "start_time": datetime.now().isoformat(),
             "current_goal": None,
-            "error_context": None,
             "conversation_id": None,  # Set when loading from remote
         }
         self.message_client = message_client
 
-    async def load_from_remote(self, conversation_id: str) -> None:
+    def set_service_manager(self, service_manager: ServiceManager):
+        self.service_manager = service_manager
+        self.message_client = self.service_manager.messages
+
+    async def load_from_remote(self, conversation_id: Optional[str] = None) -> None:
         """
         Load task context from remote message history.
 
@@ -47,12 +52,12 @@ class TaskContextManager:
 
         try:
             # Load user messages from remote
-            messages = await self.message_client.get_messages(
+            messages = await self.message_client.get_conversation_messages(
                 conversation_id=conversation_id,
                 role="user",
                 content_type="text",
                 skip=0,
-                limit=100,  # Adjust based on needs
+                limit=10,
             )
 
             # Update conversation ID
@@ -95,12 +100,7 @@ class TaskContextManager:
         """Determine the type/importance of a message for task context."""
         content = message.content.get_text().lower()
 
-        if any(word in content for word in ["error", "exception", "failed", "bug"]):
-            self.task_state["status"] = "debugging"
-            self.task_state["error_context"] = message.content.get_text()
-            return "ERROR_CONTEXT"
-
-        if any(word in content for word in ["goal", "task", "objective", "need to", "please"]):
+        if any(word in content for word in ["goal", "task", "objective", "need to", "please", "help"]):
             if not self.task_state["current_goal"]:
                 self.task_state["current_goal"] = message.content.get_text()
             return "TASK_GOAL"
@@ -125,8 +125,6 @@ class TaskContextManager:
         for msg_id, content in self.task_messages.items():
             if "TASK_GOAL" in content:
                 goal_msg = (msg_id, content)
-            if "ERROR_CONTEXT" in content:
-                error_msg = (msg_id, content)
 
         self.task_messages.clear()
 
@@ -150,8 +148,8 @@ class TaskContextManager:
 
             # Check token limit
             if self._get_total_tokens() > self.max_tokens:
-                # Remove the message we just added (unless it's a goal or error message)
-                if "TASK_GOAL" not in truncated_message and "ERROR_CONTEXT" not in truncated_message:
+                # Remove the message we just added (unless it's a goal)
+                if "TASK_GOAL" not in truncated_message:
                     self.task_messages.pop(message.id)
                 logger.debug(
                     f"Stopped adding task messages due to token limit. "
@@ -212,4 +210,3 @@ class TaskContextManager:
         """Clear all task context."""
         self.task_messages.clear()
         self.task_state["status"] = "completed"
-        self.task_state["error_context"] = None

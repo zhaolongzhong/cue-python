@@ -151,6 +151,7 @@ async def test_build_context_for_next_agent(agent: Agent) -> None:
 async def test_service_manager_integration(agent: Agent) -> None:
     """Test service manager integration."""
     service_manager = Mock(spec=ServiceManager)
+    service_manager.messages = Mock()
     service_manager.get_overwrite_model = Mock(return_value=ChatModel.GPT_4O_MINI.id)
 
     agent.set_service_manager(service_manager)

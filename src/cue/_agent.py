@@ -11,7 +11,7 @@ from .llm import LLMClient
 from .agent import AgentState
 from .tools import Tool, MemoryTool, ToolManager
 from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
-from .context import SystemContextManager, DynamicContextManager, ProjectContextManager
+from .context import TaskContextManager, SystemContextManager, DynamicContextManager, ProjectContextManager
 from .schemas import (
     Author,
     AgentConfig,
@@ -48,6 +48,7 @@ class Agent:
             metrics=self.state.get_metrics(), token_stats=self.state.get_token_stats()
         )
         self.project_context_manager = ProjectContextManager(path=self.config.project_context_path)
+        self.task_context_manager = TaskContextManager()
         self.memory_manager = DynamicMemoryManager(max_tokens=1000)
         self.context = DynamicContextManager(
             model=self.config.model,
@@ -76,8 +77,9 @@ class Agent:
         self.system_context_manager.set_service_manager(service_manager)
         self.message_manager.set_service_manager(service_manager)
         self.project_context_manager.set_service_manager(service_manager)
+        self.task_context_manager.set_service_manager(service_manager)
 
-    def get_system_message(self) -> MessageParam:
+    def _get_system_message(self) -> MessageParam:
         self.system_message_builder.set_conversation_context(self.conversation_context)
         self.system_message_builder.set_other_agents_info(self.other_agents_info)
         return self.system_message_builder.build()
@@ -120,7 +122,7 @@ class Agent:
         await tool_manager.initialize()
 
         self.update_tool_json()
-        self.system_message_param = self.get_system_message()
+        self.system_message_param = self._get_system_message()
         try:
             await self.update_context()
             if self.config.feature_flag.enable_storage:
@@ -213,11 +215,13 @@ class Agent:
         await self.system_context_manager.update_base_context()
         await self._update_recent_memories()
         await self.project_context_manager.update_context()
+        await self.task_context_manager.load_from_remote()
 
     def build_system_context(self) -> str:
         """Build short time static system context"""
         return self.system_context_manager.build_system_context(
             project_context=self.project_context_manager.get_project_context(),
+            task_context=self.task_context_manager.get_formatted_task_context(),
             memories=self.memory_manager.recent_memories,
             summaries=self.context.get_summaries(),
         )
@@ -276,7 +280,7 @@ class Agent:
             for msg in messages
         ]
 
-        system_message_content = self.get_system_message().content
+        system_message_content = self._get_system_message().content
         self.state.update_token_stats("system", system_message_content)
         system_context = self.build_system_context()
         self.metadata.token_stats = self.state.get_token_stats()
