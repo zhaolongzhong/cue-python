@@ -28,7 +28,6 @@ class MockMessage:
     created_at: datetime = datetime.now()
 
 
-@pytest.mark.unit
 class TestMessageParam:
     """Test suite for MessageParam class"""
 

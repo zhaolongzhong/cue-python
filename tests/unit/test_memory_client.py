@@ -9,8 +9,6 @@ from cue.schemas import (
 from cue.services import MemoryClient
 from cue.services.transport import HTTPTransport
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def mock_timestamps():

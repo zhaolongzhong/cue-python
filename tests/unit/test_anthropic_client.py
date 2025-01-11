@@ -8,7 +8,6 @@ from cue.schemas import AgentConfig
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.unit
 class TestAnthropicClient:
     @pytest.fixture
     def client(self):

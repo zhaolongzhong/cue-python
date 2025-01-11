@@ -11,7 +11,6 @@ def python_runner():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_simple_script_execution(python_runner):
     script = """
 print('Hello, World!')
@@ -24,7 +23,6 @@ print('Hello, World!')
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_with_allowed_imports(python_runner):
     script = """
 import math
@@ -40,7 +38,6 @@ print(f'Random number: {random.randint(1, 100)}')
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_with_prohibited_imports(python_runner):
     script = """
 import os
@@ -54,7 +51,6 @@ os.system('echo "This should not work"')
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_exceeding_timeout(python_runner):
     script = """
 import time
@@ -69,7 +65,6 @@ while True:
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_from_file(python_runner):
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:
         temp_file.write('print("Hello from file!")')
@@ -84,7 +79,6 @@ async def test_script_from_file(python_runner):
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_with_syntax_error(python_runner):
     script = """
 print('Missing closing parenthesis'
@@ -97,7 +91,6 @@ print('Missing closing parenthesis'
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_script_with_runtime_error(python_runner):
     script = """
 x = 1 / 0
@@ -110,7 +103,6 @@ x = 1 / 0
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_custom_allowed_modules(python_runner):
     # Create runner with only math module allowed
     restricted_runner = PythonRunner(allowed_modules={"math"})
@@ -128,7 +120,6 @@ print(math.pi)
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_file_size_limit(python_runner):
     # Create a temporary file that exceeds the size limit
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as temp_file:

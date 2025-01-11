@@ -9,7 +9,6 @@ def bash_tool():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_bash_tool_restart(bash_tool):
     result = await bash_tool(restart=True)
     assert result.system == "tool has been restarted."
@@ -20,7 +19,6 @@ async def test_bash_tool_restart(bash_tool):
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_bash_tool_run_command(bash_tool):
     result = await bash_tool(command="echo 'Hello, World!'")
     assert result.output.strip() == "Hello, World!"

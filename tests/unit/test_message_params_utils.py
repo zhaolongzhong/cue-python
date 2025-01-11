@@ -1,9 +1,6 @@
-import pytest
-
 from cue.utils.mesage_params_utils import has_tool_calls, is_tool_result, get_text_from_message_params
 
 
-@pytest.mark.unit
 def test_has_tool_call():
     message_dict = {"role": "assistant", "content": "Hello!"}
     assert has_tool_calls(msg=message_dict) is False
@@ -26,7 +23,6 @@ def test_has_tool_call():
     assert has_tool_calls(msg=message_dict) is True
 
 
-@pytest.mark.unit
 def test_is_tool_result():
     message_dict = {"role": "assistant", "content": "Hello!"}
     assert is_tool_result(msg=message_dict) is False
@@ -61,7 +57,6 @@ def test_is_tool_result():
     assert is_tool_result(msg=message_dict) is True, "Should be tool result"
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_claude_basic():
     """Test basic Claude message format"""
     messages = [
@@ -74,7 +69,6 @@ def test_get_text_from_message_params_claude_basic():
     assert "Hello! How can I help you?" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_claude_tool_use():
     """Test Claude message with tool use"""
     messages = [
@@ -93,7 +87,6 @@ def test_get_text_from_message_params_claude_tool_use():
     assert "name: get_weather" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_claude_tool_result():
     """Test Claude message with tool result"""
     messages = [
@@ -110,7 +103,6 @@ def test_get_text_from_message_params_claude_tool_result():
     assert "tool_use_id: tool_1" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_openai_basic():
     """Test basic OpenAI message format"""
     messages = [
@@ -123,7 +115,6 @@ def test_get_text_from_message_params_openai_basic():
     assert "Hello! How can I help you?" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_openai_tool_calls():
     """Test OpenAI message with tool calls"""
     messages = [
@@ -146,7 +137,6 @@ def test_get_text_from_message_params_openai_tool_calls():
     assert "name: get_weather" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_openai_tool_result():
     """Test OpenAI message with tool result"""
     messages = [{"role": "tool", "tool_call_id": "call_1", "name": "get_weather", "content": "72°F, Sunny"}]
@@ -156,7 +146,6 @@ def test_get_text_from_message_params_openai_tool_result():
     assert "tool_call_id: call_1" in result
 
 
-@pytest.mark.unit
 def test_get_text_from_message_params_with_image():
     """Test handling of image content"""
     messages = [

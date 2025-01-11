@@ -10,8 +10,6 @@ from cue.schemas import Author, AgentConfig, FeatureFlag, RunMetadata, MessagePa
 from cue.services import ServiceManager
 from cue.llm.llm_model import ChatModel
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def agent_config() -> AgentConfig:

@@ -74,7 +74,6 @@ class _BashSession:
             raise
 
     async def run(self, command: str):
-        """Execute a command in the bash shell."""
         if not self._started:
             raise ToolError("Session has not started.")
         if self._process.returncode is not None:
@@ -87,43 +86,41 @@ class _BashSession:
                 f"timed out: bash has not returned in {self._timeout} seconds and must be restarted",
             )
 
-        # we know these are not None because we created the process with PIPEs
         assert self._process.stdin
         assert self._process.stdout
         assert self._process.stderr
 
-        # send command to the process
-        self._process.stdin.write(command.encode() + f"; echo '{self._sentinel}'\n".encode())
-        await self._process.stdin.drain()
-
-        # read output from the process, until the sentinel is found
         try:
-            async with self.async_timeout(self._timeout):
+
+            async def execute_command():
+                self._process.stdin.write(command.encode() + f"; echo '{self._sentinel}'\n".encode())
+                await self._process.stdin.drain()
+
+                output = ""
                 while True:
-                    await asyncio.sleep(self._output_delay)
-                    # if we read directly from stdout/stderr, it will wait forever for
-                    # EOF. use the StreamReader buffer directly instead.
-                    output = self._process.stdout._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
-                    if self._sentinel in output:
-                        # strip the sentinel and break
-                        output = output[: output.index(self._sentinel)]
-                        break
+                    if self._process.stdout._buffer:
+                        chunk = self._process.stdout._buffer.decode()
+                        output += chunk
+                        self._process.stdout._buffer.clear()
+
+                        if self._sentinel in output:
+                            output = output[: output.index(self._sentinel)]
+                            return output
+
+                    await asyncio.sleep(0.01)
+
+            output = await asyncio.wait_for(execute_command(), timeout=self._timeout)
+
         except asyncio.TimeoutError:
             self._timed_out = True
             raise ToolError(
                 f"timed out: bash has not returned in {self._timeout} seconds and must be restarted",
-            ) from None
+            )
 
-        if output.endswith("\n"):
-            output = output[:-1]
-
-        error = self._process.stderr._buffer.decode()  # pyright: ignore[reportAttributeAccessIssue]
+        error = self._process.stderr._buffer.decode()
         if error.endswith("\n"):
             error = error[:-1]
-
-        # clear the buffers so that the next output can be read correctly
-        self._process.stdout._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
-        self._process.stderr._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
+        self._process.stderr._buffer.clear()
 
         return CLIResult(output=output, error=error)
 

@@ -8,8 +8,6 @@ from cue.tools._tool import Tool
 from cue.llm.llm_model import ChatModel
 from cue._agent_manager import AgentManager
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def agent_configs() -> Dict[str, AgentConfig]:

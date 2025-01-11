@@ -36,10 +36,10 @@ usage() {
   echo "Usage: $0 [options]"
   echo ""
   echo "Options:"
-  echo "  -u    Run unit tests only"
-  echo "  -i    Run integration tests only"
+  echo "  -u    Run unit tests only (tests/unit/)"
+  echo "  -i    Run integration tests only (tests/integration/)"
   echo "  -a    Run unit, integration and evaluation tests"
-  echo "  -e    Run evaluation tests (requires OPENAI_API_KEY)"
+  echo "  -e    Run evaluation tests (tests/evaluation/, requires OPENAI_API_KEY)"
   echo "  -t <test_path> Run a single test specified by the test path"
   echo "  -p <pytest_args> Additional pytest arguments (e.g., '-s -v -x')"
   echo "  -h    Show this help message and exit"
@@ -47,9 +47,9 @@ usage() {
   echo "Examples:"
   echo "  $0 -u          # Run unit tests only"
   echo "  $0 -i          # Run integration tests only"
-  echo "  $0 -a          # Run both unit and integration tests"
+  echo "  $0 -a          # Run all tests"
   echo "  $0 -e          # Run evaluation tests"
-  echo "  $0 -t tests/evaluation/test_async_client.py::TestClientManager::test_async_client  # Run a single test, e.g. ./scripts/test.sh -t tests/evaluation/test_basic_tool_use.py"
+  echo "  $0 -t tests/evaluation/test_async_client.py::TestClientManager::test_async_client  # Run a single test"
   echo "  $0 -u -e       # Run unit and evaluation tests"
   echo "  $0 -u -p '-s -v -x'  # Run unit tests with debug log, verbose output and exit on first failure"
   exit 1
@@ -99,19 +99,18 @@ shift $((OPTIND -1))
 # If no options are provided, default to running both unit and integration tests
 if ! $RUN_UNIT && ! $RUN_INTEGRATION && ! $RUN_EVALUATION && ! $RUN_SINGLE_TEST; then
   RUN_UNIT=true
-  RUN_INTEGRATION=true
 fi
 
 # Function to run pytest and handle empty test suites
 run_pytest() {
   local test_type="$1"
   local pytest_args="$2"
-  local extra_args="${3:-}"
+  local test_path="$3"
   
   echo "Running $test_type tests ..."
   # Use set +e to prevent script from exiting if pytest returns non-zero
   set +e
-  uv run pytest --ignore="backend" $pytest_args $extra_args
+  uv run pytest --ignore="backend" $pytest_args "$test_path"
   local exit_code=$?
   set -e
   
@@ -130,18 +129,17 @@ run_pytest() {
 
 # Run unit tests if flagged
 if $RUN_UNIT; then
-  run_pytest "unit" "$PYTEST_ARGS" "-m unit"
+  run_pytest "unit" "$PYTEST_ARGS" "tests/unit"
 fi
 
 # Run integration tests if flagged
 if $RUN_INTEGRATION; then
-load_env ".env.test"
-  run_pytest "integration" "$PYTEST_ARGS" "-m integration"
+  load_env ".env.test"
+  run_pytest "integration" "$PYTEST_ARGS" "tests/integration"
 fi
 
 # Run evaluation tests if flagged
 if $RUN_EVALUATION; then
-  
   # Load the main .env file to get the API keys
   load_env ".env"
   

@@ -7,8 +7,6 @@ from cue.context import DynamicContextManager
 from cue.schemas import FeatureFlag, MessageParam
 from cue._agent_summarizer import ContentSummarizer
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def token_counter():

@@ -3,11 +3,7 @@
 from typing import Dict
 from datetime import datetime
 
-import pytest
-
 from cue.agent import AgentState, TokenStats, AgentMetrics
-
-pytestmark = pytest.mark.unit
 
 
 def test_agent_state_initialization():

@@ -6,8 +6,6 @@ import pytest
 from cue.schemas import Author, Content, Message, Metadata
 from cue.context.task_context_manager import TaskContextManager
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def task_manager():

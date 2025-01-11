@@ -5,7 +5,6 @@ from src.app.core.config import get_settings
 from tests.client_wrapper import ClientWrapper
 
 
-@pytest.mark.unit
 @pytest.mark.anyio
 async def test_user_access_token():
     client = ClientWrapper(

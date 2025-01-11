@@ -1,4 +1,3 @@
-import pytest
 from openai.types.chat import (
     ChatCompletionToolParam,
     ChatCompletionToolMessageParam,
@@ -8,7 +7,6 @@ from openai.types.chat import (
 )
 
 
-@pytest.mark.unit
 def test_user():
     message_dict = {"role": "user", "content": "Hello, ChatGPT"}
     message_param = ChatCompletionUserMessageParam(**message_dict)
@@ -16,7 +14,6 @@ def test_user():
     assert message_param["content"] == "Hello, ChatGPT"
 
 
-@pytest.mark.unit
 def test_user_content():
     message_dict = {
         "role": "user",
@@ -29,7 +26,6 @@ def test_user_content():
     assert message_param["content"][0]["text"] == "knock knock."
 
 
-@pytest.mark.unit
 def test_assistant():
     message_dict = {"role": "assistant", "content": "Hello!"}
     message_param = ChatCompletionAssistantMessageParam(**message_dict)
@@ -37,7 +33,6 @@ def test_assistant():
     assert message_param["content"] == "Hello!"
 
 
-@pytest.mark.unit
 def test_assistant_dict():
     message_dict = {
         "role": "assistant",
@@ -51,7 +46,6 @@ def test_assistant_dict():
     assert message_param["content"][0]["text"] == "Who's there?"
 
 
-@pytest.mark.unit
 def test_tool_calls():
     message_dict = {
         "content": None,
@@ -76,7 +70,6 @@ def test_tool_calls():
     assert message_param["tool_calls"][0]["type"] == "function"
 
 
-@pytest.mark.unit
 def test_tool_message():
     message_dict = {
         "tool_call_id": "call_4d7b",
@@ -90,7 +83,6 @@ def test_tool_message():
     assert message_param["content"] == "example content"
 
 
-@pytest.mark.unit
 def test_tool_result_with_image():
     message_dict = {
         "role": "user",

@@ -7,8 +7,6 @@ from cue.services import ConversationClient
 from cue.services.transport import HTTPTransport
 from cue.schemas.conversation import Conversation
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def mock_timestamps():

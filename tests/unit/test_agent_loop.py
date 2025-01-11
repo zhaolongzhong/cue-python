@@ -20,8 +20,6 @@ from cue.schemas import (
 from cue._agent_loop import AgentLoop
 from cue.tools._tool import ToolManager
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def agent_config() -> AgentConfig:

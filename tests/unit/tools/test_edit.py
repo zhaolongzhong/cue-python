@@ -7,7 +7,6 @@ from cue.tools import EditTool, CLIResult, ToolError, ToolResult
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_view_command():
     edit_tool = EditTool()
 
@@ -70,7 +69,6 @@ async def test_view_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_create_command():
     edit_tool = EditTool()
 
@@ -101,7 +99,6 @@ async def test_create_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_str_replace_command():
     edit_tool = EditTool()
 
@@ -173,7 +170,6 @@ async def test_str_replace_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_insert_command():
     edit_tool = EditTool()
 
@@ -258,7 +254,6 @@ async def test_insert_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_undo_edit_command():
     edit_tool = EditTool()
 
@@ -308,7 +303,6 @@ async def test_undo_edit_command():
 
 
 @pytest.mark.asyncio
-@pytest.mark.unit
 async def test_validate_path():
     edit_tool = EditTool()
 

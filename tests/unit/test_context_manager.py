@@ -29,7 +29,6 @@ def create_tool_result(content: str, tool_call_id: str) -> Dict:
     }
 
 
-@pytest.mark.unit
 class TestDynamicContextManager:
     def test_initialization(self, context_manager):
         """Test proper initialization of DynamicContextManager"""

@@ -7,8 +7,6 @@ from cue.services import AssistantClient
 from cue.schemas.assistant import Assistant, AssistantUpdate, AssistantMetadata
 from cue.services.transport import HTTPTransport
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def mock_timestamps():

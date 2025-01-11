@@ -7,8 +7,6 @@ from cue.schemas.agent_config import AgentConfig
 from cue.schemas.completion_request import CompletionRequest
 from cue.schemas.completion_response import CompletionResponse
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def mock_llm_client():

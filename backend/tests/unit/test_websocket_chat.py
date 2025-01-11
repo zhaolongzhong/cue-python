@@ -1,5 +1,3 @@
-import pytest
-
 from tests.client_wrapper import ClientWrapper, wait_for_message_with_predicate
 from src.app.schemas.event_message import (
     EventMessage,
@@ -8,7 +6,6 @@ from src.app.schemas.event_message import (
 )
 
 
-@pytest.mark.unit
 def test_ping_pong():
     client = ClientWrapper(
         client_id="test_client",
@@ -26,7 +23,6 @@ def test_ping_pong():
         client.disconnect()
 
 
-@pytest.mark.unit
 def test_two_users_chat():
     alice = ClientWrapper(client_id="alice_client_id", user_id="alice_user_id", auto_connect=True)
     bob = ClientWrapper(
@@ -97,7 +93,6 @@ def test_two_users_chat():
     assert not bob.is_connected
 
 
-@pytest.mark.unit
 def test_three_users_chat():
     alice = ClientWrapper(
         client_id="client_alice",

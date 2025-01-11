@@ -1,12 +1,9 @@
-import pytest
-
 from tests.client_wrapper import ClientWrapper, is_client_connect, is_client_disconnect, wait_for_message_with_predicate
 from src.app.schemas.event_message import (
     EventMessageType,
 )
 
 
-@pytest.mark.unit
 def test_relationship_persistence_with_assistant():
     """Test that relationships persist correctly when user disconnects and reconnects with active assistant."""
 
@@ -65,7 +62,6 @@ def test_relationship_persistence_with_assistant():
         bob.clean_up()
 
 
-@pytest.mark.unit
 def test_relationship_persistence_multiple_reconnects():
     """Test relationships persist through multiple user reconnections."""
     alice = ClientWrapper(
@@ -126,7 +122,6 @@ def test_relationship_persistence_multiple_reconnects():
         bob.clean_up()
 
 
-@pytest.mark.unit
 def test_relationship_persistence_with_multiple_assistants():
     """Test relationships persist correctly with multiple assistants when user reconnects."""
     # Connect two assistants

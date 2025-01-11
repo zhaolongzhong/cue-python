@@ -1,6 +1,3 @@
-import pytest
-
-
 def _inject_prompt_caching(messages, num_breakpoints=3):
     breakpoints_remaining = num_breakpoints
 
@@ -21,7 +18,6 @@ def _inject_prompt_caching(messages, num_breakpoints=3):
     return messages
 
 
-@pytest.mark.unit
 def test_prompt_caching_single_message():
     single_message = [{"role": "user", "content": [{"type": "text", "text": "Hello"}]}]
     processed_messages = _inject_prompt_caching(single_message)
@@ -29,7 +25,6 @@ def test_prompt_caching_single_message():
     assert processed_messages[0]["content"][-1]["cache_control"] == {"type": "ephemeral"}
 
 
-@pytest.mark.unit
 def test_prompt_caching():
     # Create a sequence of test messages
     messages = [

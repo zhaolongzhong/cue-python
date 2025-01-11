@@ -5,8 +5,6 @@ import pytest
 from cue.utils.token_counter import TokenCounter
 from cue.memory.memory_manager import DynamicMemoryManager
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def memory_manager():

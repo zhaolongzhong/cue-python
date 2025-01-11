@@ -1,4 +1,3 @@
-import pytest
 from anthropic.types.beta import (
     BetaMessageParam,
     BetaToolUseBlockParam,
@@ -8,7 +7,6 @@ from anthropic.types.beta import (
 # Reference: https://docs.anthropic.com/en/api/messages-examples
 
 
-@pytest.mark.unit
 def test_user():
     message_dict = {"role": "user", "content": "Hello, Claude"}
     message_param = BetaMessageParam(**message_dict)
@@ -23,7 +21,6 @@ def test_assistant():
     assert message_param["content"] == "Hello!"
 
 
-@pytest.mark.unit
 def test_assistant_response():
     message_dict = {
         "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
@@ -41,7 +38,6 @@ def test_assistant_response():
     assert message_param["content"][0]["text"] == "Hello!"
 
 
-@pytest.mark.unit
 def test_tool_use():
     message_dict = {
         "role": "assistant",
@@ -64,7 +60,6 @@ def test_tool_use():
     assert param["content"][1]["type"] == "tool_use"
 
 
-@pytest.mark.unit
 def test_tool_result():
     message_dict = {
         "role": "user",
@@ -84,7 +79,6 @@ def test_tool_result():
     assert param["content"][0]["content"] == "15 degrees"
 
 
-@pytest.mark.unit
 def test_tool_result_with_image():
     """Multi tool results including image"""
     message_dict = {
@@ -120,7 +114,6 @@ def test_tool_result_with_image():
     assert param["content"][0]["content"][1]["source"]["type"] == "base64"
 
 
-@pytest.mark.unit
 def test_tool_result_empty():
     message_dict = {
         "role": "user",

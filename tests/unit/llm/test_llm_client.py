@@ -12,8 +12,6 @@ from cue.tools._tool import Tool
 from cue.llm.llm_model import ChatModel
 from cue.llm.llm_client import LLMClient, ToolResult
 
-pytestmark = pytest.mark.unit
-
 
 @pytest.fixture
 def agent_config() -> AgentConfig:
