@@ -1,4 +1,5 @@
 """Tests for agent manager."""
+
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -8,10 +9,13 @@ from cue.llm.llm_model import ChatModel
 from cue._agent_manager import AgentManager
 from cue.agent.agent_manager_state import AgentManagerState
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def agent_manager():
     return AgentManager()
+
 
 @pytest.fixture
 def mock_agent_config():
@@ -25,15 +29,17 @@ def mock_agent_config():
         tools=[],
     )
 
+
 @pytest.fixture
 def run_metadata():
     return RunMetadata(max_turns=5)
+
 
 @pytest.mark.asyncio
 async def test_agent_manager_initialization(agent_manager, mock_agent_config):
     """Test agent manager initialization."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
@@ -41,7 +47,7 @@ async def test_agent_manager_initialization(agent_manager, mock_agent_config):
         agent = agent_manager.register_agent(mock_agent_config)
         assert agent_manager.primary_agent == agent
 
-        with patch('cue._agent_manager.ServiceManager', new_callable=AsyncMock) as mock_service_manager:
+        with patch("cue._agent_manager.ServiceManager", new_callable=AsyncMock) as mock_service_manager:
             mock_service_manager.create.return_value = AsyncMock()
             await agent_manager.initialize()
 
@@ -50,11 +56,12 @@ async def test_agent_manager_initialization(agent_manager, mock_agent_config):
             metrics = agent_manager.get_metrics()
             assert metrics["active_agents"] == 1
 
+
 @pytest.mark.asyncio
 async def test_agent_registration(agent_manager, mock_agent_config):
     """Test agent registration with metrics."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
@@ -70,11 +77,12 @@ async def test_agent_registration(agent_manager, mock_agent_config):
         assert agent2 == agent  # Should return existing agent
         assert metrics["active_agents"] == 1
 
+
 @pytest.mark.asyncio
 async def test_agent_transfer(agent_manager, mock_agent_config, run_metadata):
     """Test agent transfer with metrics."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
@@ -93,16 +101,12 @@ async def test_agent_transfer(agent_manager, mock_agent_config, run_metadata):
         secondary_agent = agent_manager.register_agent(secondary_config)
 
         # Initialize
-        with patch('cue._agent_manager.ServiceManager', new_callable=AsyncMock) as mock_service_manager:
+        with patch("cue._agent_manager.ServiceManager", new_callable=AsyncMock) as mock_service_manager:
             mock_service_manager.create.return_value = AsyncMock()
             await agent_manager.initialize()
 
             # Create transfer
-            transfer = AgentTransfer(
-                to_agent_id=secondary_config.id,
-                message="test transfer",
-                max_messages=5
-            )
+            transfer = AgentTransfer(to_agent_id=secondary_config.id, message="test transfer", max_messages=5)
 
             # Set active agent
             agent_manager.active_agent = primary_agent
@@ -122,11 +126,12 @@ async def test_agent_transfer(agent_manager, mock_agent_config, run_metadata):
             # Verify active agent changed
             assert agent_manager.active_agent == secondary_agent
 
+
 @pytest.mark.asyncio
 async def test_failed_transfer(agent_manager, mock_agent_config):
     """Test failed transfer handling."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
@@ -135,11 +140,7 @@ async def test_failed_transfer(agent_manager, mock_agent_config):
         agent_manager.active_agent = primary_agent
 
         # Create transfer to non-existent agent
-        transfer = AgentTransfer(
-            to_agent_id="non_existent",
-            message="test transfer",
-            max_messages=5
-        )
+        transfer = AgentTransfer(to_agent_id="non_existent", message="test transfer", max_messages=5)
 
         # Mock build_context_for_next_agent
         primary_agent.build_context_for_next_agent = MagicMock(return_value="test context")
@@ -156,18 +157,19 @@ async def test_failed_transfer(agent_manager, mock_agent_config):
         # Verify active agent unchanged
         assert agent_manager.active_agent == primary_agent
 
+
 @pytest.mark.asyncio
 async def test_run_execution(agent_manager, mock_agent_config, run_metadata):
     """Test run execution with state management."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
         # Register and setup agent
-        agent = agent_manager.register_agent(mock_agent_config)
+        _agent = agent_manager.register_agent(mock_agent_config)
 
-        with patch('cue._agent_manager.ServiceManager', new_callable=AsyncMock) as mock_service_manager:
+        with patch("cue._agent_manager.ServiceManager", new_callable=AsyncMock) as mock_service_manager:
             mock_service_manager.create.return_value = AsyncMock()
             await agent_manager.initialize()
 
@@ -177,14 +179,12 @@ async def test_run_execution(agent_manager, mock_agent_config, run_metadata):
             mock_response.get_text.return_value = "Test response"
 
             # Mock agent_loop run
-            with patch('cue._agent_manager.AgentLoop.run', new_callable=AsyncMock) as mock_run:
+            with patch("cue._agent_manager.AgentLoop.run", new_callable=AsyncMock) as mock_run:
                 mock_run.return_value = mock_response
 
                 # Start run
-                response = await agent_manager.start_run(
-                    active_agent_id="test_agent",
-                    message="test message",
-                    run_metadata=run_metadata
+                _response = await agent_manager.start_run(
+                    active_agent_id="test_agent", message="test message", run_metadata=run_metadata
                 )
 
                 # Verify state transitions and metrics
@@ -192,32 +192,31 @@ async def test_run_execution(agent_manager, mock_agent_config, run_metadata):
                 assert metrics["total_runs"] == 1
                 assert agent_manager.state_manager.state == AgentManagerState.STOPPED
 
+
 @pytest.mark.asyncio
 async def test_error_handling(agent_manager, mock_agent_config, run_metadata):
     """Test error handling during run."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
         # Register and setup agent
-        agent = agent_manager.register_agent(mock_agent_config)
+        _agent = agent_manager.register_agent(mock_agent_config)
 
-        with patch('cue._agent_manager.ServiceManager', new_callable=AsyncMock) as mock_service_manager:
+        with patch("cue._agent_manager.ServiceManager", new_callable=AsyncMock) as mock_service_manager:
             mock_service_manager.create.return_value = AsyncMock()
             await agent_manager.initialize()
 
             # Mock agent_loop to raise error
             error = ValueError("test error")
-            with patch('cue._agent_manager.AgentLoop.run', new_callable=AsyncMock) as mock_run:
+            with patch("cue._agent_manager.AgentLoop.run", new_callable=AsyncMock) as mock_run:
                 mock_run.side_effect = error
 
                 # Start run
                 with pytest.raises(ValueError):
                     await agent_manager.start_run(
-                        active_agent_id="test_agent",
-                        message="test message",
-                        run_metadata=run_metadata
+                        active_agent_id="test_agent", message="test message", run_metadata=run_metadata
                     )
 
                 # Verify error was recorded
@@ -226,11 +225,12 @@ async def test_error_handling(agent_manager, mock_agent_config, run_metadata):
                 assert metrics["errors_by_type"]["ValueError"] == 1
                 assert agent_manager.state_manager.state == AgentManagerState.ERROR
 
+
 @pytest.mark.asyncio
 async def test_cleanup(agent_manager, mock_agent_config):
     """Test cleanup with metrics."""
     # Mock LLMClient
-    with patch('cue._agent.LLMClient') as mock_llm_client:
+    with patch("cue._agent.LLMClient") as mock_llm_client:
         mock_llm_client_instance = MagicMock()
         mock_llm_client.return_value = mock_llm_client_instance
 
@@ -248,7 +248,7 @@ async def test_cleanup(agent_manager, mock_agent_config):
         agent2 = agent_manager.register_agent(secondary_config)
 
         # Initialize
-        with patch('cue._agent_manager.ServiceManager', new_callable=AsyncMock) as mock_service_manager:
+        with patch("cue._agent_manager.ServiceManager", new_callable=AsyncMock) as mock_service_manager:
             mock_service_manager.create.return_value = AsyncMock()
             await agent_manager.initialize()
 

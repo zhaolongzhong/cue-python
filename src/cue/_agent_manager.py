@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, Union, Callable, Optional
+from typing import Any, Dict, List, Union, Callable, Optional
 
 from .utils import DebugUtils, console_utils
 from ._agent import Agent
@@ -312,6 +312,16 @@ class AgentManager:
     def get_agent(self, identifier: str) -> Optional[Agent]:
         if identifier in self._agents:
             return self._agents[identifier]
+        for agent in self._agents.values():
+            if agent.config.id == identifier:
+                return agent
+
+    def list_agents(self, exclude: List[str] = []) -> List[dict[str, str]]:
+        return [
+            {"id": agent.id, "description": agent.description}
+            for agent in self._agents.values()
+            if agent.id not in exclude
+        ]
 
     async def initialize_run(self):
         """Initialize run state."""

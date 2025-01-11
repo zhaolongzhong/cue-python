@@ -1,4 +1,5 @@
 """State management for agent manager."""
+
 from enum import Enum
 from typing import Dict, List, Optional
 from datetime import datetime
@@ -7,6 +8,7 @@ from dataclasses import field, dataclass
 
 class AgentManagerState(Enum):
     """States for the agent manager."""
+
     UNINITIALIZED = "uninitialized"
     INITIALIZING = "initializing"
     READY = "ready"
@@ -16,18 +18,22 @@ class AgentManagerState(Enum):
     STOPPED = "stopped"
     CLEANING = "cleaning"
 
+
 @dataclass
 class TransferRecord:
     """Record of an agent transfer."""
+
     from_agent: str
     to_agent: str
     timestamp: datetime
     success: bool
     error: Optional[str] = None
 
+
 @dataclass
 class AgentManagerMetrics:
     """Metrics for monitoring agent manager performance."""
+
     total_transfers: int = 0
     successful_transfers: int = 0
     failed_transfers: int = 0
@@ -47,11 +53,7 @@ class AgentManagerMetrics:
             self.failed_transfers += 1
 
         record = TransferRecord(
-            from_agent=from_agent,
-            to_agent=to_agent,
-            timestamp=datetime.now(),
-            success=success,
-            error=error
+            from_agent=from_agent, to_agent=to_agent, timestamp=datetime.now(), success=success, error=error
         )
         self.recent_transfers.append(record)
         # Keep only last 10 transfers
@@ -77,8 +79,9 @@ class AgentManagerMetrics:
             "total_transfers": self.total_transfers,
             "successful_transfers": self.successful_transfers,
             "failed_transfers": self.failed_transfers,
-            "transfer_success_rate": (self.successful_transfers / self.total_transfers * 100
-                                    if self.total_transfers > 0 else 0),
+            "transfer_success_rate": (
+                self.successful_transfers / self.total_transfers * 100 if self.total_transfers > 0 else 0
+            ),
             "total_runs": self.total_runs,
             "active_agents": self.active_agents,
             "uptime_seconds": (datetime.now() - self.start_time).total_seconds(),
@@ -90,14 +93,16 @@ class AgentManagerMetrics:
                     "to": t.to_agent,
                     "timestamp": t.timestamp.isoformat(),
                     "success": t.success,
-                    "error": t.error
+                    "error": t.error,
                 }
                 for t in self.recent_transfers
-            ]
+            ],
         }
+
 
 class AgentManagerStateManager:
     """Manages state and metrics for the agent manager."""
+
     def __init__(self):
         self._state = AgentManagerState.UNINITIALIZED
         self.metrics = AgentManagerMetrics()
