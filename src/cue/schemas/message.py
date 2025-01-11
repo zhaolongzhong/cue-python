@@ -26,6 +26,14 @@ class Author(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(None, description="Additional author metadata")
 
 
+class ContentType(str, Enum):
+    text = "text"
+    tool_message = "tool_message"
+    tool_calls = "tool_calls"
+    tool_result = "tool_result"
+    tool_use = "tool_use"
+
+
 class Content(BaseModel):
     """Represents the content of a message.
 
@@ -34,6 +42,8 @@ class Content(BaseModel):
     - A list of content blocks (e.g., text + images)
     - A dictionary (e.g., tool calls, structured responses)
     """
+
+    type: Optional[ContentType] = None
 
     content: Union[str, List[Dict[str, Any]], Dict[str, Any]] = Field(
         ..., description="Message content in various formats"

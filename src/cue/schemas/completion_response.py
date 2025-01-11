@@ -16,7 +16,7 @@ from anthropic.types.beta import (
 from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
 
 from ..schemas.error import ErrorResponse
-from ..schemas.message import Author, Content, Metadata, MessageCreate
+from ..schemas.message import Author, Content, Metadata, ContentType, MessageCreate
 
 ToolCallToolUseBlock = Union[ChatCompletionMessageToolCall, ToolUseBlock]
 
@@ -217,23 +217,26 @@ class CompletionResponse:
                 if isinstance(response, PromptCachingBetaMessage):
                     author = Author(role=response.role)
                     metadata = Metadata(model=response.model, payload=response.model_dump())
-                    original = response.content
-                    if isinstance(original, str):
-                        content = Content(content=original)
-                    elif isinstance(original, BaseModel):
-                        content = original.model_dump()
-                    elif isinstance(original, list):
-                        content = Content(
-                            content=[item.model_dump() if isinstance(item, BaseModel) else item for item in original]
-                        )
-                    else:
-                        raise Exception(f"Unhandled content: {original}")
+                    processed_content = []
+                    has_tool_use = False
+
+                    for block in response.content:
+                        if isinstance(block, ToolUseBlock):
+                            has_tool_use = True
+                            processed_content.append(block.model_dump())
+                        elif isinstance(block, TextBlock):
+                            processed_content.append(block.model_dump())
+                        else:
+                            raise Exception(f"Unhandled content block type: {block}")
+
+                    content_type = ContentType.tool_use if has_tool_use else ContentType.text
+                    content = Content(type=content_type, content=processed_content)
                     return MessageCreate(author=author, content=content, metadata=metadata)
                 else:
                     raise Exception(f"Unhandled response: {response}")
             elif isinstance(self.error, ErrorResponse):
                 author = Author(role="assistant")
-                content = Content(content=error.model_dump_json())
+                content = Content(type=ContentType.text, content=error.model_dump_json())
                 metadata = Metadata(model=self.model)
                 return MessageCreate(author=author, content=content, metadata=metadata)
             else:
@@ -245,11 +248,12 @@ class CompletionResponse:
                 metadata = Metadata(model=response.model, payload=response.model_dump())
                 if message.tool_calls:
                     content = Content(
+                        type=ContentType.tool_calls,
                         content=message.content if message.content else "",
                         tool_calls=[item.model_dump() for item in message.tool_calls],
                     )
                 elif message.content:
-                    content = Content(content=message.content)
+                    content = Content(type=ContentType.text, content=message.content)
                 else:
                     raise Exception(f"Unhandled message: {message}")
 

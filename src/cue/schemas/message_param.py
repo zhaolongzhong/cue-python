@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from pydantic import Field, BaseModel
 
-from .message import Author, Content, Message, Metadata, MessageCreate
+from .message import Author, Content, Message, Metadata, ContentType, MessageCreate
 
 
 class MessageParam(BaseModel):
@@ -39,7 +39,7 @@ class MessageParam(BaseModel):
 
     def to_message_create(self) -> MessageCreate:
         author = Author(role=self.role)
-        content = Content(content=self.content)
+        content = Content(type=ContentType.text, content=self.content)
         metadata = Metadata(model=self.model)
         return MessageCreate(author=author, content=content, metadata=metadata)
 

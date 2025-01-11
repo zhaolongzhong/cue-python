@@ -2,7 +2,7 @@ from typing import List, Union, Optional
 
 from pydantic import Field, BaseModel
 
-from .message import Author, Content, Metadata, MessageCreate
+from .message import Author, Content, Metadata, ContentType, MessageCreate
 from .run_metadata import RunMetadata
 
 DEFAULT_MAX_MESSAGES = 6
@@ -52,11 +52,12 @@ class ToolResponseWrapper(BaseModel):
         if "claude" in self.model:
             author = Author(role="user")
             # tool_result_message = {"role": "user", "content": tool_results}
-            content = Content(content=self.tool_result_message["content"])
+
+            content = Content(type=ContentType.tool_result, content=self.tool_result_message["content"])
             metadata = Metadata(model=self.model)
             return MessageCreate(author=author, content=content, metadata=metadata)
         else:
             author = Author(role="tool")
-            content = Content(content=self.tool_messages)
+            content = Content(type=ContentType.tool_message, content=self.tool_messages)
             metadata = Metadata(model=self.model)
             return MessageCreate(author=author, content=content, metadata=metadata)
