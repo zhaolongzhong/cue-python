@@ -132,12 +132,12 @@ async def test_primary_agent_selection(agent_manager, agent_configs):
     agent_manager._update_other_agents_info()
 
     # Check primary agent knows about helper
-    assert len(main_agent.other_agents_info) == 1
-    assert main_agent.other_agents_info[0]["id"] == "helper"
+    assert len(main_agent.other_agents) == 1
+    assert "helper" in main_agent.other_agents
 
     # Check helper agent knows about primary
-    assert isinstance(helper_agent.other_agents_info, dict)
-    assert helper_agent.other_agents_info["id"] == "main"
+    assert isinstance(helper_agent.other_agents, dict)
+    assert "main" in helper_agent.other_agents
 
     await agent_manager.clean_up()
 

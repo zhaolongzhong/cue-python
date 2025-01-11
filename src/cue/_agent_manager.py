@@ -305,20 +305,12 @@ class AgentManager:
         return agent
 
     def _update_other_agents_info(self):
-        if not self.primary_agent:
-            for agent in self._agents.values():
-                if agent.config.is_primary:
-                    self.primary_agent = agent
-
-        for agent_id, agent in self._agents.items():
-            if agent.config.is_primary:
-                agent.other_agents_info = self.list_agents(exclude=[agent_id])
-            else:
-                agent.other_agents_info = {
-                    "id": self.primary_agent.id,
-                    "description": self.primary_agent.description,
-                }
-            logger.debug(f"{agent_id} other_agents_info: {agent.other_agents_info}")
+        """Update each agent with information about other available agents."""
+        for agent in self._agents.values():
+            other_agents = {
+                id: {"name": other.config.name} for id, other in self._agents.items() if id != agent.config.id
+            }
+            agent.update_other_agents_info(other_agents)
 
     def get_agent(self, identifier: str) -> Optional[Agent]:
         if identifier in self._agents:

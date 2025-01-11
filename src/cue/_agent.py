@@ -59,6 +59,7 @@ class Agent:
         self.client: LLMClient = LLMClient(self.config)
         self.metadata: Optional[RunMetadata] = None
         self.description = self._generate_description()
+        self.other_agents = {}
         self.other_agents_info = ""
         self.tool_json = None
         self.system_message_builder = SystemMessageBuilder(self.id, self.config)
@@ -78,6 +79,18 @@ class Agent:
         self.message_manager.set_service_manager(service_manager)
         self.project_context_manager.set_service_manager(service_manager)
         self.task_context_manager.set_service_manager(service_manager)
+
+    def update_other_agents_info(self, other_agents: Dict[str, Dict[str, str]]) -> None:
+        """Update information about other available agents.
+        Args:
+            other_agents: Dictionary mapping agent IDs to their info dictionaries.
+                        Each info dict should contain at least a 'name' key.
+        """
+        self.other_agents = other_agents
+        # Format the info into a readable string for system messages
+        if other_agents:
+            agents_list = [f"{agent_id} ({info['name']})" for agent_id, info in other_agents.items()]
+            self.other_agents_info = "Available agents: " + ", ".join(agents_list)
 
     def _get_system_message(self) -> MessageParam:
         self.system_message_builder.set_conversation_context(self.conversation_context)
