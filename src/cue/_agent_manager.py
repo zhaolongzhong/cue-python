@@ -252,7 +252,14 @@ class AgentManager:
     async def on_message_received(self, event: EventMessage) -> None:
         """Receive message from websocket"""
         current_client_id = self.service_manager.client_id
-        if event.type == EventMessageType.USER and event.client_id != current_client_id:
+
+        if event.client_id == current_client_id:
+            logger.debug(f"Skip handling own message: {event.model_dump_json(indent=4)}")
+            return
+
+        if event.type == EventMessageType.CONTROL:
+            await self._handle_control_message(event)
+        elif event.type == EventMessageType.USER:
             # Anthropic uses "user" role for tool result.
             # We only use USER type only when the user sends the message directly, not tool result message
             if isinstance(event.payload, MessagePayload):
@@ -271,15 +278,47 @@ class AgentManager:
                     )
             else:
                 logger.debug(f"Receive unexpected event: {event}")
-        elif event.type == EventMessageType.ASSISTANT and event.client_id != current_client_id:
+        elif event.type == EventMessageType.ASSISTANT:
             logger.debug(f"handle_message receive assistant message: {event.model_dump_json(indent=4)}")
             if isinstance(event.payload, MessagePayload):
                 message = event.payload.message
                 self.console_utils.print_msg(message)
+
+    async def _handle_control_message(self, event: EventMessage) -> None:
+        """Handle control messages for agent management"""
+        if not isinstance(event.payload, ControlMessagePayload):
+            logger.warning(f"Invalid control message payload: {event}")
+            return
+
+        command = event.payload.command.lower()
+        args = event.payload.args or {}
+
+        if command == "stop":
+            logger.info("Received stop command via websocket")
+            await self.stop_run()
+            await self.service_manager.send_message_to_user("Agent execution stopped by user request")
+
+        elif command == "increase_turns":
+            increase = args.get("amount", 10)
+            if isinstance(increase, int) and increase > 0:
+                self.run_metadata.max_turns += increase
+                msg = f"Maximum turns increased by {increase} to {self.run_metadata.max_turns}"
+                logger.info(msg)
+                await self.service_manager.send_message_to_user(msg)
+            else:
+                await self.service_manager.send_message_to_user("Invalid turn increase amount specified")
+
+        elif command == "toggle_user_control":
+            enabled = args.get("enabled", True)
+            if self.active_agent and hasattr(self.active_agent, "agent_loop"):
+                self.active_agent.agent_loop.user_control_enabled = enabled
+                status = "enabled" if enabled else "disabled"
+                msg = f"User control {status} for agent {self.active_agent.id}"
+                logger.info(msg)
+                await self.service_manager.send_message_to_user(msg)
+
         else:
-            logger.debug(
-                f"Skip handle_message current_client_id {current_client_id}: {event.model_dump_json(indent=4)}"
-            )
+            logger.warning(f"Unknown control command: {command}")
 
     async def handle_response(self, response: Union[CompletionResponse, MessageParam]):
         self.console_utils.print_msg(f"{response.get_text()}")

@@ -14,6 +14,7 @@ class EventMessageType(str, Enum):
     PING = "ping"
     PONG = "pong"
     ERROR = "error"
+    CONTROL = "control"  # For agent control commands (stop, max_turns, etc)
 
 
 class MessagePayloadBase(BaseModel):
@@ -45,11 +46,18 @@ class PingPongEventPayload(MessagePayloadBase):
     type: str
 
 
+class ControlMessagePayload(MessagePayloadBase):
+    """Payload for agent control messages"""
+    command: str = Field(..., description="Control command (e.g. 'stop', 'increase_turns')")
+    args: Optional[dict] = Field(default=None, description="Optional command arguments")
+
+
 EventPayload = Union[
     ClientEventPayload,
     PingPongEventPayload,
     MessagePayload,
     GenericMessagePayload,
+    ControlMessagePayload,
 ]
 
 
