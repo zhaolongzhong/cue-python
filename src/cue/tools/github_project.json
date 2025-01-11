@@ -8,7 +8,13 @@
             "properties": {
                 "command": {
                     "type": "string",
-                    "enum": ["list", "create", "update", "search", "get"],
+                    "enum": [
+                        "list",
+                        "create",
+                        "update",
+                        "search",
+                        "get"
+                    ],
                     "description": "The operation to perform on the GitHub project."
                 },
                 "project_number": {
@@ -30,9 +36,22 @@
                 "query": {
                     "type": "string",
                     "description": "Required for search command. The search query string to match against item titles."
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "Backlog",
+                        "Todo",
+                        "In Progress",
+                        "Done"
+                    ],
+                    "description": "Optional for update command. The status value to set. Must be one of the predefined values."
                 }
             },
-            "required": ["command", "project_number"]
+            "required": [
+                "command",
+                "project_number"
+            ]
         }
     }
 }

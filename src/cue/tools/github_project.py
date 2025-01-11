@@ -20,6 +20,8 @@ from .base import BaseTool, ToolError, ToolResult
 from .github.project import ProjectItem, GitHubProject
 
 Command = Literal["list", "create", "update", "search", "get"]
+Status = Literal["Backlog", "Todo", "In Progress", "Done"]
+VALID_STATUS_VALUES = list(get_args(Status))
 
 
 class GitHubProjectTool(BaseTool):
@@ -57,6 +59,12 @@ class GitHubProjectTool(BaseTool):
             query=query,
             **kwargs,
         )
+
+    def validate_status(self, status: Optional[str]) -> None:
+        """Validate status value against allowed options."""
+        if status is not None and status not in VALID_STATUS_VALUES:
+            valid_options = '", "'.join(VALID_STATUS_VALUES)
+            raise ToolError(f'Invalid status value: "{status}". Valid options are: "{valid_options}"')
 
     def _get_project(self, project_number: int) -> GitHubProject:
         """Get or create GitHubProject instance."""
@@ -182,6 +190,8 @@ class GitHubProjectTool(BaseTool):
                     raise ToolError("Either `title` or `body` must be provided for command: update")
 
                 try:
+                    # Validate status value early if provided
+                    self.validate_status(status)
                     # First get the current item to preserve title if not updating it
                     current_item = project.get_item(item_id)
                     if not current_item:
@@ -189,12 +199,14 @@ class GitHubProjectTool(BaseTool):
 
                     # If no title provided, use existing title
                     update_title = title if title is not None else current_item.title
+                    update_body = body if body is not None else current_item.body
+                    update_status = status if status is not None else current_item.status
 
                     item = project.update_item(
                         item_id=item_id,
                         title=update_title,  # Always provide title
-                        body=body,
-                        status=status,
+                        body=update_body,
+                        status=update_status,
                     )
                     return ToolResult(
                         output=f"Updated item in project {project_number}:\n{self._format_items([item], project_number)}"
