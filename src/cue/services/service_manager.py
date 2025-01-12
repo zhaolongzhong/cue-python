@@ -26,6 +26,7 @@ from .transport import (
 from .memory_client import MemoryClient
 from .message_client import MessageClient
 from .assistant_client import AssistantClient
+from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
 from ..schemas.event_message import EventMessage, MessagePayload, EventMessageType, ClientEventPayload
@@ -86,6 +87,7 @@ class ServiceManager:
                 "message": self._handle_message,
                 "user": self._handle_message,
                 "assistant": self._handle_message,
+                "assistant_to_assistant": self._handle_assistant_to_assistant,
             },
         )
 
@@ -94,6 +96,7 @@ class ServiceManager:
         self.memories = MemoryClient(self._http)
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
+        self.monitoring = MonitoringClient(self._http)
 
     @classmethod
     async def create(
@@ -246,6 +249,82 @@ class ServiceManager:
                 # Catch any other errors in on_message handling
                 logger.error(f"Error in on_message handling: {e}. Message content: {message.model_dump_json(indent=4)}")
 
+    async def send_to_assistant(
+        self,
+        target_assistant_id: str,
+        message: str,
+        *,
+        conversation_id: Optional[str] = None,
+        message_type: str = "request",
+        requires_response: bool = True,
+        metadata: Optional[dict] = None,
+    ) -> None:
+        """Send a direct message to another assistant"""
+        if not self.assistant_id:
+            logger.error("No assistant_id set for sender")
+            return
+
+        thread_id = str(uuid.uuid4())
+        msg = EventMessage(
+            type=EventMessageType.ASSISTANT_TO_ASSISTANT,
+            payload=AssistantCommunicationPayload(
+                message=message,
+                source_assistant_id=self.assistant_id,
+                target_assistant_id=target_assistant_id,
+                conversation_id=conversation_id or self.messages.default_conversation_id,
+                message_type=message_type,
+                requires_response=requires_response,
+                thread_id=thread_id,
+                metadata=metadata,
+            ),
+            websocket_request_id=str(uuid.uuid4()),
+        )
+        
+        # Store in conversation history
+        await self.messages.create(
+            conversation_id=msg.payload.conversation_id,
+            content=message,
+            metadata={
+                "type": "assistant_to_assistant",
+                "source_assistant_id": self.assistant_id,
+                "target_assistant_id": target_assistant_id,
+                "thread_id": thread_id,
+                "message_type": message_type,
+                **metadata or {},
+            }
+        )
+        
+        await self.broadcast(msg.model_dump_json())
+
+    async def _handle_assistant_to_assistant(self, message: EventMessage) -> None:
+        """Handle incoming assistant-to-assistant messages"""
+        # Verify this message is for us
+        if not isinstance(message.payload, AssistantCommunicationPayload):
+            return
+            
+        if message.payload.target_assistant_id != self.assistant_id:
+            return
+
+        # Store in conversation history
+        await self.messages.create(
+            conversation_id=message.payload.conversation_id,
+            content=message.payload.message,
+            metadata={
+                "type": "assistant_to_assistant",
+                "source_assistant_id": message.payload.source_assistant_id,
+                "target_assistant_id": self.assistant_id,
+                "thread_id": message.payload.thread_id,
+                "message_type": message.payload.message_type,
+            }
+        )
+
+        # Handle the message
+        if self.on_message_received:
+            try:
+                await self.on_message_received(message)
+            except Exception as e:
+                logger.error(f"Error handling assistant message: {e}. Message: {message.model_dump_json(indent=4)}")
+
     async def _check_server_availability(self) -> bool:
         """Check if the server is running by performing an HTTP GET request to the health endpoint."""
         health_url = f"{self.base_url}/health"
@@ -292,6 +371,7 @@ class ServiceManager:
         self.memories.set_default_assistant_id(self.assistant_id)
         conversation_id = await self.conversations.create_default_conversation(self.assistant_id)
         self.messages.set_default_conversation_id(conversation_id)
+        self.monitoring.set_context(assistant_id=self.assistant_id, conversation_id=conversation_id)
         await self._get_assistant(self.assistant_id)
 
         logger.debug(f"_prepare_conversation: {json.dumps(self.get_conversation_metadata(), indent=4)}")
