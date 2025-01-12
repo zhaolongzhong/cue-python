@@ -13,6 +13,7 @@ from .schemas import (
     AgentTransfer,
     CompletionResponse,
     ConversationContext,
+    ToolResponseWrapper,
 )
 from .services import ServiceManager
 from ._agent_loop import AgentLoop
@@ -248,11 +249,11 @@ class AgentManager:
             participants=[from_agent_id, agent_transfer.to_agent_id]
         )
 
-    async def broadcast_response(self, completion_response: CompletionResponse):
+    async def broadcast_response(self, response: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
         logger.debug("broadcast assistant message")
         if not self.service_manager:
             return
-        await self.service_manager.send_message_to_user(completion_response)
+        await self.service_manager.send_message_to_user(response)
 
     async def broadcast_user_message(self, user_input: str) -> None:
         """Broadcast user message through websocket"""
@@ -293,7 +294,7 @@ class AgentManager:
                 f"Skip handle_message current_client_id {current_client_id}: {event.model_dump_json(indent=4)}"
             )
 
-    async def handle_response(self, response: Union[CompletionResponse, MessageParam]):
+    async def handle_response(self, response: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
         self.console_utils.print_msg(f"{response.get_text()}")
         await self.broadcast_response(response)
 

@@ -9,7 +9,7 @@ from .run_metadata import RunMetadata
 class CompletionRequest(BaseModel):
     author: Optional[Author] = Field(default=None, description="Author")
     messages: list[Dict]
-    model: str = "gpt-4o"
+    model: str = "gpt-4o-mini"
     max_tokens: int = Field(default=4096, ge=1, description="The maximum number of tokens to generate.")
     temperature: float = Field(default=0.8, ge=0, le=2, description="The sampling temperature for generation.")
     response_format_type: Optional[str] = "text"  # `json_object`

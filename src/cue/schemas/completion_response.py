@@ -50,18 +50,25 @@ class CompletionResponse:
     def __init__(
         self,
         model: str,
-        author: Optional[Any],
+        author: Optional[Any] = None,
         response: Optional[Any] = None,
+        chat_completion: Optional[ChatCompletion] = None,
+        anthropic_message: Optional[AnthropicMessage] = None,
         error: Optional[Any] = None,
         metadata: Optional[Any] = None,
         msg_id: Optional[str] = None,
+        **kwargs,
     ):
         self.msg_id = msg_id
         self.author = author
         self.model = model
-        self.response = response
         self.error = error
         self.metadata = metadata
+        if isinstance(chat_completion, dict):
+            chat_completion = ChatCompletion(**chat_completion)
+        if isinstance(anthropic_message, dict):
+            anthropic_message = PromptCachingBetaMessage(**anthropic_message)
+        self.response = response or chat_completion or anthropic_message
 
     def get_id(self) -> str:
         if isinstance(self.response, (AnthropicMessage, PromptCachingBetaMessage)):

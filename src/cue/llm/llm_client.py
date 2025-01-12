@@ -18,6 +18,7 @@ from ..schemas import (
     ToolCallToolUseBlock,
 )
 from .llm_model import ChatModel
+from .cue_client import CueClient
 from .llm_request import LLMRequest
 from .gemini_client import GeminiClient
 from .openai_client import OpenAIClient
@@ -38,12 +39,15 @@ class LLMClient(LLMRequest):
             "openai": OpenAIClient,
             "anthropic": AnthropicClient,
             "google": GeminiClient,
+            "cue": CueClient,
         }
 
-        client_class = client_class_mapping.get(provider)
-        if not client_class:
-            logger.error(f"Client class for key prefix {provider} not found")
-            raise ValueError(f"Client class for key prefix {provider} not found")
+        if config.use_cue:
+            client_class = client_class_mapping.get("cue")
+        else:
+            client_class = client_class_mapping.get(provider)
+            if not client_class:
+                raise ValueError(f"Client class for key prefix {provider} not found")
 
         return client_class(config=config)
 

@@ -1,4 +1,5 @@
 import sys
+import platform
 from typing import Any, ClassVar, Optional
 from functools import lru_cache
 
@@ -49,6 +50,12 @@ class Settings(BaseSettings):
         extra="ignore",
         use_enum_values=True,
     )
+
+    def get_base_url(self) -> str:
+        base_url = self.API_URL
+        if platform.system() != "Darwin" and "http://localhost" in base_url:
+            base_url = base_url.replace("http://localhost", "http://host.docker.internal")
+        return base_url
 
 
 @lru_cache(maxsize=1)

@@ -2,7 +2,6 @@ import json
 import uuid
 import asyncio
 import logging
-import platform
 from typing import Union, Callable, Optional, Awaitable
 
 import aiohttp
@@ -56,8 +55,6 @@ class ServiceManager:
         self.client_id: Optional[str] = agent.client_id if agent else run_metadata.id
         self.user_id: Optional[str] = None
         self.is_server_available = False
-        if platform.system() != "Darwin" and "http://localhost" in self.base_url:
-            self.base_url = self.base_url.replace("http://localhost", "http://host.docker.internal")
         self._session = session
         self.on_message_received = on_message_received
         self.recipient: Optional[str] = None  # either user id or assistant runner id
@@ -107,7 +104,7 @@ class ServiceManager:
         agent: Optional[AgentConfig] = None,
     ):
         settings = get_settings()
-        base_url = base_url or settings.API_URL
+        base_url = base_url or settings.get_base_url()
         session = aiohttp.ClientSession()
         service_manager = cls(
             run_metadata=run_metadata,
@@ -178,7 +175,7 @@ class ServiceManager:
 
         if isinstance(message, ToolResponseWrapper):
             role = "tool" if message.tool_messages else "user"
-            name = message.author.name
+            name = message.author.name if message.author else None
             payload = message.model_dump(exclude=None, exclude_unset=True, exclude_defaults=True)
             model = message.model
         elif isinstance(message, CompletionResponse):

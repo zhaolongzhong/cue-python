@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime
 
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, field_serializer
 
 from ..schemas import ConversationContext
 from ..utils.token_counter import TokenCounter
@@ -34,6 +34,10 @@ class AgentMetrics(BaseModel):
     tool_calls: int = Field(default=0)
     errors: int = Field(default=0)
     last_error: Optional[str] = None
+
+    @field_serializer("start_time")
+    def serialize_start_time(self, v: datetime) -> str:
+        return v.isoformat()
 
 
 class AgentState:

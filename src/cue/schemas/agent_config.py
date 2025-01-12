@@ -19,6 +19,7 @@ class AgentConfig(BaseModel):
     instruction: Optional[str] = None
     model: Optional[str] = None
     api_key: Optional[str] = None
+    use_cue: Optional[bool] = False
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
