@@ -26,6 +26,7 @@ from .transport import (
 from .memory_client import MemoryClient
 from .message_client import MessageClient
 from .assistant_client import AssistantClient
+from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
 from ..schemas.event_message import EventMessage, MessagePayload, EventMessageType, ClientEventPayload
@@ -86,6 +87,11 @@ class ServiceManager:
                 "message": self._handle_message,
                 "user": self._handle_message,
                 "assistant": self._handle_message,
+                # Control event handlers
+                "control_reset": self._handle_control_reset,
+                "control_get_state": self._handle_control_get_state,
+                "control_permission": self._handle_control_permission,
+                "control_permission_response": self._handle_control_permission_response,
             },
         )
 
@@ -94,6 +100,7 @@ class ServiceManager:
         self.memories = MemoryClient(self._http)
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
+        self.monitoring = MonitoringClient(self._http)
 
     @classmethod
     async def create(
@@ -292,6 +299,7 @@ class ServiceManager:
         self.memories.set_default_assistant_id(self.assistant_id)
         conversation_id = await self.conversations.create_default_conversation(self.assistant_id)
         self.messages.set_default_conversation_id(conversation_id)
+        self.monitoring.set_context(assistant_id=self.assistant_id, conversation_id=conversation_id)
         await self._get_assistant(self.assistant_id)
 
         logger.debug(f"_prepare_conversation: {json.dumps(self.get_conversation_metadata(), indent=4)}")
@@ -313,3 +321,122 @@ class ServiceManager:
             "model": self.overwrite_agent_config.model if self.overwrite_agent_config else None,
         }
         return medadata
+
+    async def _handle_control_reset(self, message: EventMessage) -> None:
+        """Handle agent reset request"""
+        logger.info(f"Received reset request: {message.model_dump_json(indent=4)}")
+        reset_type = message.payload.reset_type
+        try:
+            if reset_type == "full":
+                # Full reset - clear all state including conversation history
+                await self.memories.clear()
+                await self.conversations.create_default_conversation(self.assistant_id)
+                self.overwrite_agent_config = None
+            else:
+                # Soft reset - clear current conversation state only
+                await self.conversations.create_default_conversation(self.assistant_id)
+
+            # Send confirmation
+            msg = EventMessage(
+                type=EventMessageType.CONTROL_STATE,
+                payload=ControlStatePayload(
+                    message="Reset completed successfully",
+                    control_type="state",
+                    state={"reset_type": reset_type, "status": "success"}
+                )
+            )
+            await self.broadcast(msg.model_dump_json())
+        except Exception as e:
+            logger.error(f"Reset failed: {e}")
+            # Send error
+            msg = EventMessage(
+                type=EventMessageType.ERROR,
+                payload=MessagePayload(
+                    message=f"Reset failed: {str(e)}",
+                    metadata={"error_type": "reset_failed"}
+                )
+            )
+            await self.broadcast(msg.model_dump_json())
+
+    async def _handle_control_get_state(self, message: EventMessage) -> None:
+        """Handle request for agent state"""
+        logger.info("Received state request")
+        try:
+            state = {
+                "agent_id": self.assistant_id,
+                "conversation_id": self.messages.default_conversation_id,
+                "model": self.get_overwrite_model(),
+                "metadata": self.get_conversation_metadata(),
+                "websocket_status": {
+                    "connected": self._ws_manager.is_connected,
+                    "metrics": self._ws_manager.metrics.__dict__
+                }
+            }
+
+            msg = EventMessage(
+                type=EventMessageType.CONTROL_STATE,
+                payload=ControlStatePayload(
+                    control_type="state",
+                    state=state
+                )
+            )
+            await self.broadcast(msg.model_dump_json())
+        except Exception as e:
+            logger.error(f"Failed to get state: {e}")
+            msg = EventMessage(
+                type=EventMessageType.ERROR,
+                payload=MessagePayload(
+                    message=f"Failed to get state: {str(e)}",
+                    metadata={"error_type": "state_retrieval_failed"}
+                )
+            )
+            await self.broadcast(msg.model_dump_json())
+
+    async def _handle_control_permission(self, message: EventMessage) -> None:
+        """Handle permission request from assistant"""
+        logger.info(f"Handling permission request: {message.model_dump_json(indent=4)}")
+        # Forward the permission request to the user
+        await self.broadcast(message.model_dump_json())
+
+    async def _handle_control_permission_response(self, message: EventMessage) -> None:
+        """Handle permission response from user"""
+        logger.info(f"Received permission response: {message.model_dump_json(indent=4)}")
+        if self.on_message_received:
+            try:
+                await self.on_message_received(message)
+            except Exception as e:
+                logger.error(f"Error handling permission response: {e}")
+
+    async def request_permission(self, permission_type: str, reason: str, details: Optional[dict] = None) -> None:
+        """Request permission from user"""
+        msg = EventMessage(
+            type=EventMessageType.CONTROL_PERMISSION,
+            payload=ControlPermissionPayload(
+                control_type="permission",
+                permission_type=permission_type,
+                reason=reason,
+                details=details
+            )
+        )
+        await self.broadcast(msg.model_dump_json())
+
+    async def reset_agent(self, reset_type: str = "full") -> None:
+        """Reset agent state"""
+        msg = EventMessage(
+            type=EventMessageType.CONTROL_RESET,
+            payload=ControlResetPayload(
+                control_type="reset",
+                reset_type=reset_type
+            )
+        )
+        await self.broadcast(msg.model_dump_json())
+
+    async def get_agent_state(self) -> None:
+        """Request current agent state"""
+        msg = EventMessage(
+            type=EventMessageType.CONTROL_GET_STATE,
+            payload=ControlStatePayload(
+                control_type="state"
+            )
+        )
+        await self.broadcast(msg.model_dump_json())

@@ -5,6 +5,7 @@ from .message import Author, Content, Message, Metadata, AuthorRole, MessageChun
 from .assistant import Assistant, AssistantCreate, AssistantUpdate, AssistantMetadata
 from .run_usage import RunUsage, RunUsageAndLimits
 from .tool_call import AssistantMessage
+from .monitoring import ErrorType, ErrorReport, ErrorReportResponse
 from .agent_config import AgentConfig
 from .conversation import Conversation, ConversationCreate, ConversationUpdate
 from .feature_flag import FeatureFlag
@@ -40,6 +41,9 @@ __all__ = [
     "Conversation",
     "ConversationCreate",
     "ConversationUpdate",
+    "ErrorType",
+    "ErrorReport",
+    "ErrorReportResponse",
     "ErrorResponse",
     "EventMessage",
     "EventMessageType",

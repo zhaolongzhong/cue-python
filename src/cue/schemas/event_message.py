@@ -14,6 +14,12 @@ class EventMessageType(str, Enum):
     PING = "ping"
     PONG = "pong"
     ERROR = "error"
+    # Control events
+    CONTROL_RESET = "control_reset"
+    CONTROL_GET_STATE = "control_get_state"
+    CONTROL_STATE = "control_state"
+    CONTROL_PERMISSION = "control_permission"
+    CONTROL_PERMISSION_RESPONSE = "control_permission_response"
 
 
 class MessagePayloadBase(BaseModel):
@@ -45,11 +51,48 @@ class PingPongEventPayload(MessagePayloadBase):
     type: str
 
 
+class ControlEventPayload(MessagePayloadBase):
+    """Base class for control events"""
+    control_type: str
+
+
+class ControlResetPayload(ControlEventPayload):
+    """Reset agent state"""
+    control_type: str = "reset"
+    reset_type: str = Field("full", description="Type of reset: 'full' or 'soft'")
+
+
+class ControlStatePayload(ControlEventPayload):
+    """Get/Return agent state"""
+    control_type: str = "state"
+    state: Optional[dict] = Field(None, description="Agent state information")
+
+
+class ControlPermissionPayload(ControlEventPayload):
+    """Permission request/response"""
+    control_type: str = "permission"
+    permission_type: str = Field(..., description="Type of permission requested")
+    reason: str = Field(..., description="Reason for permission request")
+    details: Optional[dict] = Field(None, description="Additional details")
+
+
+class ControlPermissionResponsePayload(ControlEventPayload):
+    """Permission response"""
+    control_type: str = "permission_response"
+    permission_type: str
+    granted: bool
+    reason: Optional[str] = None
+
+
 EventPayload = Union[
     ClientEventPayload,
     PingPongEventPayload,
     MessagePayload,
     GenericMessagePayload,
+    ControlResetPayload,
+    ControlStatePayload,
+    ControlPermissionPayload,
+    ControlPermissionResponsePayload,
 ]
 
 

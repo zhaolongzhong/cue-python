@@ -5,7 +5,9 @@ from typing import Any, Dict, List, Union, Callable, Optional
 from .utils import DebugUtils, console_utils
 from ._agent import Agent
 from .schemas import (
+    ErrorType,
     AgentConfig,
+    FeatureFlag,
     RunMetadata,
     MessageParam,
     AgentTransfer,
@@ -15,7 +17,6 @@ from .schemas import (
 from .services import ServiceManager
 from ._agent_loop import AgentLoop
 from .tools._tool import ToolManager, MCPServerManager
-from .schemas.feature_flag import FeatureFlag
 from .schemas.event_message import (
     EventMessage,
     MessagePayload,
@@ -66,6 +67,7 @@ class AgentManager:
                 agent=self.primary_agent.config,
             )
             await self.service_manager.connect()
+            logger.debug("service manager connected")
 
         # Update other agents info once we set primary agent
         self._update_other_agents_info()
@@ -161,6 +163,7 @@ class AgentManager:
                     callback=callback,
                     prompt_callback=self.prompt_callback,
                     tool_manager=self.tool_manager,
+                    monitoring=self.service_manager.monitoring if self.service_manager else None,
                 )
                 if isinstance(response, AgentTransfer):
                     if response.run_metadata:
@@ -172,6 +175,10 @@ class AgentManager:
                 return response
         except Exception as e:
             logger.error(f"Ran into error for agent loop: {e}")
+            if self.service_manager:
+                await self.service_manager.monitoring.report_exception(
+                    e, error_type=ErrorType.SYSTEM, additional_context={"component": "_agent_manager"}
+                )
 
     async def stop_run(self):
         """Signal the execute_run loop to stop gracefully."""
@@ -206,6 +213,11 @@ class AgentManager:
             error_msg = f"Target agent '{agent_transfer.to_agent_id}' not found. Transfer to primary: {agent_transfer.transfer_to_primary}. Available agents: {available_agents}"
             await self.active_agent.add_message(MessageParam(role="user", content=error_msg))
             logger.error(error_msg)
+            if self.service_manager:
+                await self.service_manager.monitoring.report_error(
+                    message=error_msg,
+                    error_type=ErrorType.TRANSFER,
+                )
             return
 
         messages = []
