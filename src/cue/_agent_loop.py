@@ -4,8 +4,17 @@ from typing import Any, Union, Callable, Optional
 
 from .utils import DebugUtils
 from ._agent import Agent
-from .schemas import Author, RunMetadata, MessageParam, AgentTransfer, CompletionResponse, ToolResponseWrapper
+from .schemas import (
+    Author,
+    ErrorType,
+    RunMetadata,
+    MessageParam,
+    AgentTransfer,
+    CompletionResponse,
+    ToolResponseWrapper,
+)
 from .tools._tool import ToolManager
+from .services.monitoring_client import MonitoringClient
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +32,7 @@ class AgentLoop:
         run_metadata: RunMetadata,
         callback: Optional[Callable[[CompletionResponse], Any]] = None,
         prompt_callback: Optional[Callable] = None,
+        monitoring: Optional[MonitoringClient] = None,
     ) -> Optional[Union[CompletionResponse, AgentTransfer]]:
         """
         Run the agent execution loop.
@@ -69,6 +79,10 @@ class AgentLoop:
                 break
             except Exception as e:
                 logger.exception(f"Error during agent run: {e}")
+                if monitoring:
+                    await monitoring.report_exception(
+                        e, error_type=ErrorType.SYSTEM, additional_context={"component": "_agent_loop"}
+                    )
                 break
 
             author = Author(role="assistant", name="")

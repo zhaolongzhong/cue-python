@@ -26,6 +26,7 @@ from .transport import (
 from .memory_client import MemoryClient
 from .message_client import MessageClient
 from .assistant_client import AssistantClient
+from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
 from ..schemas.event_message import EventMessage, MessagePayload, EventMessageType, ClientEventPayload
@@ -94,6 +95,7 @@ class ServiceManager:
         self.memories = MemoryClient(self._http)
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
+        self.monitoring = MonitoringClient(self._http)
 
     @classmethod
     async def create(
@@ -169,11 +171,30 @@ class ServiceManager:
         await self.broadcast(msg.model_dump_json())
 
     async def send_message_to_user(self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]) -> None:
-        payload = None
         role = "assistant"
         name = None
         model = None
+        msg_type = EventMessageType.ASSISTANT
 
+        # If message has been persisted to DB, broadcast full payload
+        if hasattr(message, "db_message") and message.db_message is not None:
+            msg = EventMessage(
+                type=msg_type,
+                payload=MessagePayload(
+                    message=message.db_message.content,
+                    sender=self.runner_id,
+                    recipient="",  # empty or user id
+                    websocket_request_id=str(uuid.uuid4()),
+                    metadata=message.db_message.metadata,
+                    payload=message.db_message.payload,
+                    msg_id=message.db_message.id,
+                ),
+                websocket_request_id=str(uuid.uuid4()),
+            )
+            await self.broadcast(msg.model_dump_json())
+            return
+
+        # Fallback to existing logic for non-persisted messages
         if isinstance(message, ToolResponseWrapper):
             role = "tool" if message.tool_messages else "user"
             name = message.author.name
@@ -193,7 +214,7 @@ class ServiceManager:
             author["name"] = name
 
         msg = EventMessage(
-            type=EventMessageType.ASSISTANT,
+            type=msg_type,
             payload=MessagePayload(
                 message=message.get_text(),
                 sender=self.runner_id,
@@ -292,6 +313,7 @@ class ServiceManager:
         self.memories.set_default_assistant_id(self.assistant_id)
         conversation_id = await self.conversations.create_default_conversation(self.assistant_id)
         self.messages.set_default_conversation_id(conversation_id)
+        self.monitoring.set_context(assistant_id=self.assistant_id, conversation_id=conversation_id)
         await self._get_assistant(self.assistant_id)
 
         logger.debug(f"_prepare_conversation: {json.dumps(self.get_conversation_metadata(), indent=4)}")
