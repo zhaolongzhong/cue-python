@@ -26,6 +26,7 @@ from .transport import (
 from .memory_client import MemoryClient
 from .message_client import MessageClient
 from .assistant_client import AssistantClient
+from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
 from ..schemas.event_message import EventMessage, MessagePayload, EventMessageType, ClientEventPayload
@@ -94,6 +95,7 @@ class ServiceManager:
         self.memories = MemoryClient(self._http)
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
+        self.monitoring = MonitoringClient(self._http)
 
     @classmethod
     async def create(
@@ -149,10 +151,48 @@ class ServiceManager:
         await self._ws_manager.disconnect()
         await self._session.close()
 
-    async def broadcast(self, message: str) -> None:
+    async def broadcast(self, message: Union[str, EventMessage], max_retries: int = 3) -> bool:
+        """
+        Broadcast a message to all connected clients
+
+        Args:
+            message: Message to broadcast (string or EventMessage)
+            max_retries: Maximum number of retry attempts (default: 3)
+    
+        Returns:
+            bool: True if broadcast successful, False otherwise
+        """
         if not self.is_server_available:
-            return
-        await self._ws_manager.send_message(message)
+            logger.error("Server not available for broadcast")
+            return False
+
+        try:
+            # Convert to string if EventMessage object
+            if isinstance(message, EventMessage):
+                message = message.model_dump_json()
+
+            # Validate JSON format
+            try:
+                json.loads(message)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON format in message: {e}")
+                return False
+
+            # Attempt broadcast with retries
+            for attempt in range(max_retries):
+                try:
+                    await self._ws_manager.send_message(message)
+                    return True
+                except Exception as e:
+                    if attempt == max_retries - 1:
+                        logger.error(f"Failed to broadcast message after {max_retries} attempts: {e}")
+                        return False
+                    logger.warning(f"Broadcast attempt {attempt + 1} failed: {e}. Retrying...")
+                    await asyncio.sleep(0.5 * (attempt + 1))  # Exponential backoff
+
+        except Exception as e:
+            logger.error(f"Unexpected error in broadcast: {e}")
+            return False
 
     async def send_message_to_assistant(self, message: str) -> None:
         websocket_request_id = str(uuid.uuid4())
@@ -292,6 +332,7 @@ class ServiceManager:
         self.memories.set_default_assistant_id(self.assistant_id)
         conversation_id = await self.conversations.create_default_conversation(self.assistant_id)
         self.messages.set_default_conversation_id(conversation_id)
+        self.monitoring.set_context(assistant_id=self.assistant_id, conversation_id=conversation_id)
         await self._get_assistant(self.assistant_id)
 
         logger.debug(f"_prepare_conversation: {json.dumps(self.get_conversation_metadata(), indent=4)}")

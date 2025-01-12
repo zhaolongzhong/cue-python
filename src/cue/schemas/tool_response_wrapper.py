@@ -35,18 +35,50 @@ class ToolResponseWrapper(BaseModel):
     base64_images: Optional[list] = None
     model: str
 
-    def get_text(self) -> str:
-        text = ""
+    def get_text(self, style: Optional[str] = None) -> str:
+        """
+        Get formatted text from tool messages
+
+        Args:
+            style: Optional format style ("plain", "structured", "compact", "markdown")
+                  Defaults to "structured"
+
+        Returns:
+            Formatted text string
+        """
+        from .tool_output_formatter import FormatStyle, ToolOutputFormatter
+
+        # Initialize formatter with requested or default style
+        formatter = ToolOutputFormatter(
+            style=FormatStyle(style) if style else FormatStyle.STRUCTURED
+        )
+
         if "claude" in self.model:
             contents = self.tool_result_message.get("content", [])
+            text_parts = []
+
             for content in contents:
-                text += f"{content.get('content', '')}\n"
+                content_text = content.get('content', '')
+                # Detect and format content appropriately
+                formatted = formatter.format_output(
+                    formatter.detect_content_type(content_text)
+                )
+                text_parts.append(formatted)
+
+            return "\n\n".join(text_parts).strip()
+
         else:
+            text_parts = []
             for message in self.tool_messages:
                 if message.get("content", ""):
-                    text += f"{message.get('text', '')}\n"
+                    msg_text = message.get('text', '')
+                    # Detect and format content appropriately
+                    formatted = formatter.format_output(
+                        formatter.detect_content_type(msg_text)
+                    )
+                    text_parts.append(formatted)
 
-        return text.strip()
+            return "\n\n".join(text_parts).strip()
 
     def to_message_create(self) -> MessageCreate:
         if "claude" in self.model:
