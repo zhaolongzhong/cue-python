@@ -43,8 +43,9 @@ class OpenAIClient(LLMRequest):
                 for msg in request.messages
             ]
             DebugUtils.debug_print_messages(messages, tag=f"{self.config.id} send_completion_request")
-            is_o1 = "o1" in request.model
-            if is_o1:
+            is_o1_mini = "o1-mini" == request.model
+            is_o1 = "o1" == request.model
+            if is_o1_mini:
                 messages = self.handle_o1_model(messages, request)
                 DebugUtils.take_snapshot(messages, suffix=f"{request.model}_pre_request")
                 response = await self.client.chat.completions.create(
@@ -83,16 +84,26 @@ class OpenAIClient(LLMRequest):
                 messages.insert(0, system_message)
                 DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
                 if self.tool_json:
-                    response = await self.client.chat.completions.create(
-                        messages=messages,
-                        model=self.model,
-                        max_completion_tokens=request.max_tokens,
-                        temperature=request.temperature,
-                        response_format=request.response_format,
-                        tool_choice=request.tool_choice,
-                        tools=self.tool_json,
-                        parallel_tool_calls=request.parallel_tool_calls,
-                    )
+                    if is_o1:
+                        response = await self.client.chat.completions.create(
+                            messages=messages,
+                            model=self.model,
+                            max_completion_tokens=request.max_tokens,
+                            response_format=request.response_format,
+                            tool_choice=request.tool_choice,
+                            tools=self.tool_json,
+                        )
+                    else:
+                        response = await self.client.chat.completions.create(
+                            messages=messages,
+                            model=self.model,
+                            max_completion_tokens=request.max_tokens,
+                            temperature=request.temperature,
+                            response_format=request.response_format,
+                            tool_choice=request.tool_choice,
+                            tools=self.tool_json,
+                            parallel_tool_calls=request.parallel_tool_calls,
+                        )
                 else:
                     response = await self.client.chat.completions.create(
                         messages=messages,

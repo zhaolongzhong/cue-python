@@ -17,6 +17,7 @@ class ChatModel(Enum):
     # OpenAI https://platform.openai.com/docs/models/overview
     GPT_4O = ("gpt-4o", True, "openai")
     GPT_4O_MINI = ("gpt-4o-mini", True, "openai")
+    O1 = ("o1", True, "openai")
     O1_MINI = ("o1-mini", False, "openai")
     O1_PREVIEW = ("o1-preview", False, "openai")
 
