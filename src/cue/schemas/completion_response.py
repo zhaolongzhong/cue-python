@@ -31,8 +31,8 @@ class CompletionUsage(BaseModel):
     reasoning_tokens: int = 0
 
     # https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
-    cache_creation_input_tokens: int = 0
-    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: Optional[int] = Field(default=0)
+    cache_read_input_tokens: Optional[int] = Field(default=0)
 
     model_config = ConfigDict(
         populate_by_name=True,  # Allows both alias and field name to be used
