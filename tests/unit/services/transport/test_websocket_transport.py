@@ -15,8 +15,9 @@ def transport():
         client_id="test_client",
         api_key="test_key",
         max_retries=2,
-        retry_delay=0.1  # Short delay for faster tests
+        retry_delay=0.1,  # Short delay for faster tests
     )
+
 
 @pytest.mark.asyncio
 async def test_listen_reconnects_on_closing_transport_error(transport):
@@ -28,6 +29,7 @@ async def test_listen_reconnects_on_closing_transport_error(transport):
     # Set up the ws.__aiter__ to raise the error we want to test
     async def mock_aiter():
         raise Exception("Cannot write to closing transport")
+
     transport.ws.__aiter__ = mock_aiter
 
     # Mock connect() to track calls and reset error state
@@ -51,6 +53,7 @@ async def test_listen_reconnects_on_closing_transport_error(transport):
     assert transport.connect.called
     assert transport._handle_disconnect.called
 
+
 @pytest.mark.asyncio
 async def test_listen_handles_close_message(transport):
     """Test that _listen() properly handles WebSocket CLOSE messages."""
@@ -67,6 +70,7 @@ async def test_listen_handles_close_message(transport):
         yield close_msg
         # Prevent infinite loop
         raise asyncio.CancelledError()
+
     transport.ws.__aiter__ = mock_aiter
 
     transport._handle_disconnect = AsyncMock()
@@ -79,6 +83,7 @@ async def test_listen_handles_close_message(transport):
     # Verify proper handling
     assert transport._handle_disconnect.called
     assert transport.connect.called
+
 
 @pytest.mark.asyncio
 async def test_handle_disconnect_cleanup(transport):
@@ -96,6 +101,7 @@ async def test_handle_disconnect_cleanup(transport):
     assert transport.ws.close.called
     assert not transport._connected
 
+
 @pytest.mark.asyncio
 async def test_reconnection_after_error(transport):
     """Test the full reconnection cycle after a connection error."""
@@ -108,8 +114,9 @@ async def test_reconnection_after_error(transport):
     transport.ws.send_str = AsyncMock(side_effect=Exception("Cannot write to closing transport"))
 
     # Attempt to send a message
-    with pytest.raises(Exception):
+    with pytest.raises(Exception) as exc_info:
         await transport.send("test message")
+    assert str(exc_info.value) == "Cannot write to closing transport"  # Verify specific error
 
     # Verify reconnection attempt
     assert not transport._connected  # Connection should be marked as disconnected
