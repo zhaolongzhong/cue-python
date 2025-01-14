@@ -122,29 +122,49 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
             await asyncio.sleep(backoff)
 
     async def _listen(self):
-        """Listen for incoming messages and handle pongs"""
+        """Listen for incoming messages and handle pongs with automatic reconnection"""
+        while True:  # Keep trying to listen
+            try:
+                if not self._connected or not self.ws or self.ws.closed:
+                    logger.info("WebSocket not connected in listen loop. Attempting to reconnect...")
+                    await self.connect()
+                    continue
+
+                async for msg in self.ws:
+                    if msg.type == WSMsgType.PONG:
+                        logger.debug("Protocol-level pong received from _listen")
+                        self.heartbeat.pong_received()
+                    elif msg.type == WSMsgType.PING:
+                        logger.debug("Protocol-level ping received, sending pong")
+                        await self.ws.pong()
+                    elif msg.type == WSMsgType.TEXT:
+                        data = msg.data
+                        logger.debug(f"Received message: {data}")
+                        await self._message_queue.put(data)
+                    elif msg.type == WSMsgType.CLOSE:
+                        logger.info("WebSocket connection closed by server. Attempting to reconnect...")
+                        await self._handle_disconnect()
+                        break  # Break the async for loop to attempt reconnection
+                    elif msg.type == WSMsgType.ERROR:
+                        logger.error("WebSocket connection error. Attempting to reconnect...")
+                        await self._handle_disconnect()
+                        break  # Break the async for loop to attempt reconnection
+
+            except Exception as e:
+                logger.error(f"Error in WebSocket listen loop: {str(e)}")
+                await self._handle_disconnect()
+                await asyncio.sleep(self.retry_delay)  # Wait before reconnection attempt
+
+    async def _handle_disconnect(self) -> None:
+        """Handle disconnection and prepare for reconnection"""
         try:
-            async for msg in self.ws:
-                if msg.type == WSMsgType.PONG:
-                    logger.debug("Protocol-level pong received from _listen")
-                    self.heartbeat.pong_received()
-                elif msg.type == WSMsgType.PING:
-                    logger.debug("Protocol-level ping received, sending pong")
-                    await self.ws.pong()
-                elif msg.type == WSMsgType.TEXT:
-                    # Handle text messages as per your application logic
-                    data = msg.data
-                    logger.debug(f"Received message: {data}")
-                    await self._message_queue.put(data)  # Put the message into the queue
-                elif msg.type == WSMsgType.CLOSE:
-                    logger.info("WebSocket connection closed by server")
-                    await self.disconnect()
-                elif msg.type == WSMsgType.ERROR:
-                    logger.error("WebSocket connection error")
-                    await self.disconnect()
+            await self.heartbeat.stop()
+            if self.ws and not self.ws.closed:
+                await self.ws.close()
+            self._connected = False
+            logger.info(f"WebSocket connection reset for client {self.client_id}")
         except Exception as e:
-            logger.error(f"Error in WebSocket listen loop: {str(e)}")
-            await self.disconnect()
+            logger.error(f"Error during WebSocket reset: {str(e)}")
 
     async def disconnect(self) -> None:
         """Safely close the WebSocket connection"""
