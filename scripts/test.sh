@@ -5,6 +5,9 @@ set -euo pipefail
 # Change to the project root directory
 cd "$(dirname "$0")/.."
 
+# Unset any existing virtual environment to avoid conflicts
+unset VIRTUAL_ENV 2>/dev/null || true
+
 # Function to load environment variables from a file
 load_env() {
   local env_file="$1"
