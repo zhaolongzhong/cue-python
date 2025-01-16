@@ -1,4 +1,5 @@
 import json
+import random
 import asyncio
 import logging
 from typing import Any, Dict, Optional, Protocol
@@ -38,7 +39,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         api_key: str,
         runner_id: Optional[str] = None,
         session: Optional[aiohttp.ClientSession] = None,
-        max_retries: int = 3,
+        max_retries: int = 10,
         retry_delay: float = 1.0,
     ):
         self.ws_url = ws_url
@@ -60,7 +61,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         # Initialize the message queue
         self._message_queue: asyncio.Queue = asyncio.Queue()
 
-    async def connect(self) -> None:
+    async def connect(self, start_listener: bool = True) -> None:
         """Establish WebSocket connection with retry logic and proper error handling"""
         if self._connected and self.ws and not self.ws.closed:
             logger.debug("WebSocket is already connected.")
@@ -92,8 +93,8 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
                 await self.heartbeat.start()
 
                 # Start listening to incoming messages
-                asyncio.create_task(self._listen())
-
+                if start_listener:
+                    asyncio.create_task(self._listen())
                 return
 
             except aiohttp.ClientResponseError as e:
@@ -122,29 +123,35 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
             await asyncio.sleep(backoff)
 
     async def _listen(self):
-        """Listen for incoming messages and handle pongs"""
-        try:
-            async for msg in self.ws:
-                if msg.type == WSMsgType.PONG:
-                    logger.debug("Protocol-level pong received from _listen")
-                    self.heartbeat.pong_received()
-                elif msg.type == WSMsgType.PING:
-                    logger.debug("Protocol-level ping received, sending pong")
-                    await self.ws.pong()
-                elif msg.type == WSMsgType.TEXT:
-                    # Handle text messages as per your application logic
-                    data = msg.data
-                    logger.debug(f"Received message: {data}")
-                    await self._message_queue.put(data)  # Put the message into the queue
-                elif msg.type == WSMsgType.CLOSE:
-                    logger.info("WebSocket connection closed by server")
-                    await self.disconnect()
-                elif msg.type == WSMsgType.ERROR:
-                    logger.error("WebSocket connection error")
-                    await self.disconnect()
-        except Exception as e:
-            logger.error(f"Error in WebSocket listen loop: {str(e)}")
-            await self.disconnect()
+        """Listen for incoming messages, handle pongs, and auto-reconnect on disconnect."""
+        while True:
+            try:
+                async for msg in self.ws:
+                    if msg.type == WSMsgType.PONG:
+                        logger.debug("Protocol-level pong received from _listen")
+                        self.heartbeat.pong_received()
+                    elif msg.type == WSMsgType.PING:
+                        logger.debug("Protocol-level ping received, sending pong")
+                        await self.ws.pong()
+                    elif msg.type == WSMsgType.TEXT:
+                        data = msg.data
+                        logger.debug(f"Received message: {data}")
+                        await self._message_queue.put(data)
+                    elif msg.type == WSMsgType.CLOSE:
+                        logger.info("WebSocket connection closed by server")
+                        break
+                    elif msg.type == WSMsgType.ERROR:
+                        logger.error("WebSocket connection error")
+                        break
+            except Exception as e:
+                logger.error(f"Error in WebSocket listen loop: {str(e)}")
+
+            logger.info("WebSocket listener terminated, attempting to reconnect")
+            try:
+                await self.reconnect()
+            except Exception as reconnect_error:
+                logger.error(f"Reconnection failed, exiting listen loop: {reconnect_error}")
+                break
 
     async def disconnect(self) -> None:
         """Safely close the WebSocket connection"""
@@ -171,10 +178,15 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
 
     async def receive(self) -> Dict[str, Any]:
         """Receive message with connection check and error handling"""
+        data = await self._message_queue.get()
         try:
             # Instead of calling self.ws.receive(), get messages from the queue
-            message = await self._message_queue.get()
-            return json.loads(message)  # Assuming messages are JSON-formatted
+            payload = json.loads(data)
+            if payload.get("error") and payload.get("code") == 429:
+                logger.warning("Rate limit hit.")
+                await asyncio.sleep(1)
+                return None
+            return payload
         except json.JSONDecodeError as e:
             logger.error(f"JSON decode error: {str(e)}")
             raise WebSocketConnectionError(f"Invalid JSON message received: {str(e)}")
@@ -196,3 +208,24 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
         except Exception as e:
             logger.error(f"Error during protocol-level ping: {str(e)}")
             raise WebSocketConnectionError(f"Ping failed: {str(e)}")
+
+    async def reconnect(self) -> None:
+        backoff = self.retry_delay
+        MAX_BACKOFF_LIMIT = 300  # maximum 5 minutes
+        JITTER_FACTOR = 0.1  # ±10% jitter
+        while True:
+            try:
+                logger.info("Attempting to reconnect...")
+                await self.disconnect()
+                await self.connect(start_listener=False)
+                logger.info("Reconnected successfully")
+                return
+            except Exception as e:
+                logger.warning(f"Reconnect failed: {e}")
+                # Apply jitter: randomize backoff slightly to avoid thundering herd
+                jitter = backoff * JITTER_FACTOR * (random.random() * 2 - 1)
+                sleep_time = min(backoff + jitter, MAX_BACKOFF_LIMIT)
+                logger.debug(f"Waiting {sleep_time:.2f} seconds before next attempt...")
+                await asyncio.sleep(sleep_time)
+                # Increase backoff, capped at MAX_BACKOFF_LIMIT
+                backoff = min(backoff * 2, MAX_BACKOFF_LIMIT)
