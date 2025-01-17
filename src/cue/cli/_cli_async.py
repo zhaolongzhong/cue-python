@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import signal
 import asyncio
 import logging
@@ -278,7 +277,6 @@ def _parse_args():
     parser = argparse.ArgumentParser(description="Cue CLI: An interactive asynchronous client.")
     parser.add_argument("-v", "--version", action="store_true", help="Print the version of the Cue client.")
     parser.add_argument("-r", "--run", action="store_true", help="Run the interactive CLI.")
-    parser.add_argument("-c", "--config", action="store_true", help="Print the default configuration.")
     parser.add_argument("-d", "--enable_debug_turn", action="store_true", help="Pause for each run loop turn.")
     parser.add_argument(
         "-client", "--client", action="store_true", help="Run as a second remote client with websocket."
@@ -291,7 +289,8 @@ def _parse_args():
     )
     parser.add_argument("--runner-id", type=str, metavar="ID", help="Specify runner ID for the runner mode")
     parser.add_argument(
-        "--config-path",
+        "-c",
+        "--config_path",
         type=str,
         help="Path to a custom cue.config.json file",
     )
@@ -317,13 +316,6 @@ async def async_main():
         from .. import __version__
 
         print(f"version {__version__}")
-        return 0
-
-    if args.config:
-        cli_temp = CLI()
-        for _id, config in cli_temp.configs.items():
-            print(json.dumps(config.model_dump(), indent=4, default=str))
-        print(f"active agent: {cli_temp.active_agent_id}")
         return 0
 
     # Configure logging
