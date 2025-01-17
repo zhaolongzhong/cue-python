@@ -1,11 +1,20 @@
 """Scheduler service for managing scheduled tasks."""
 
+import enum
 import uuid
 import asyncio
 import logging
 import datetime
 from typing import Dict, Callable, Optional
 from dataclasses import dataclass
+
+
+class TaskType(enum.Enum):
+    """Task execution type."""
+
+    ONE_TIME = "one_time"
+    RECURRING = "recurring"
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +29,8 @@ class ScheduledTask:
     callback: Callable
     args: tuple = ()
     kwargs: dict = None
+    task_type: TaskType = TaskType.ONE_TIME
+    interval: Optional[datetime.timedelta] = None
     is_completed: bool = False
     completed_at: Optional[datetime.datetime] = None
 
@@ -49,7 +60,14 @@ class SchedulerService:
             self.initialized = True
 
     def schedule_task(
-        self, instruction: str, schedule_time: datetime.datetime, callback: Callable, *args, **kwargs
+        self,
+        instruction: str,
+        schedule_time: datetime.datetime,
+        callback: Callable,
+        *args,
+        task_type: TaskType = TaskType.ONE_TIME,
+        interval: Optional[datetime.timedelta] = None,
+        **kwargs,
     ) -> str:
         """Schedule a new task.
 
@@ -58,11 +76,16 @@ class SchedulerService:
             schedule_time: When to execute the task
             callback: Function to call when task is due
             *args: Positional arguments for callback
+            task_type: ONE_TIME or RECURRING task
+            interval: Required for recurring tasks, time between executions
             **kwargs: Keyword arguments for callback
 
         Returns:
             str: Task ID
         """
+        if task_type == TaskType.RECURRING and interval is None:
+            raise ValueError("Interval is required for recurring tasks")
+
         task_id = str(uuid.uuid4())
         task = ScheduledTask(
             id=task_id,
@@ -71,9 +94,11 @@ class SchedulerService:
             callback=callback,
             args=args,
             kwargs=kwargs,
+            task_type=task_type,
+            interval=interval,
         )
         self.tasks[task_id] = task
-        logger.info(f"Scheduled task {task_id} for {schedule_time}")
+        logger.info(f"Scheduled {task_type.value} task {task_id} for {schedule_time}")
         return task_id
 
     def get_task(self, task_id: str) -> Optional[ScheduledTask]:
@@ -96,8 +121,12 @@ class SchedulerService:
         except Exception as e:
             logger.error(f"Error executing task {task.id}: {e}")
         finally:
-            task.is_completed = True  # Mark as completed even if it fails
-            task.completed_at = datetime.datetime.now()
+            if task.task_type == TaskType.ONE_TIME:
+                task.is_completed = True
+                task.completed_at = datetime.datetime.now()
+            else:
+                # Schedule next execution for recurring tasks
+                task.schedule_time = datetime.datetime.now() + task.interval
 
     async def _check_tasks(self):
         """Check and execute due tasks."""
@@ -110,11 +139,16 @@ class SchedulerService:
             for task in due_tasks:
                 await self._execute_task(task)
 
-            # Clean up tasks that have been completed for at least 5 seconds
+            # Clean up completed one-time tasks that finished more than 5 seconds ago
             self.tasks = {
                 tid: task
                 for tid, task in self.tasks.items()
-                if not (task.is_completed and task.completed_at and (now - task.completed_at).total_seconds() > 5)
+                if not (
+                    task.task_type == TaskType.ONE_TIME
+                    and task.is_completed
+                    and task.completed_at
+                    and (now - task.completed_at).total_seconds() > 5
+                )
             }
 
             await asyncio.sleep(1)  # Check every second
