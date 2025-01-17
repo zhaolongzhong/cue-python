@@ -291,7 +291,7 @@ def _parse_args():
     )
     parser.add_argument("--runner-id", type=str, metavar="ID", help="Specify runner ID for the runner mode")
     parser.add_argument(
-        "--config-path",
+        "-c",
         type=str,
         help="Path to a custom cue.config.json file",
     )
