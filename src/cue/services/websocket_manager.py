@@ -6,6 +6,8 @@ from typing import Any, Dict, Callable, Optional, Awaitable
 from datetime import datetime
 from dataclasses import dataclass
 
+logger = logging.getLogger(__name__)
+
 from tenacity import (
     retry,
     before_sleep_log,
@@ -40,7 +42,33 @@ class WebSocketState(Enum):
 
 
 class WebSocketManager:
-    """Manages WebSocket connection lifecycle and message handling with improved stability"""
+    """Manages WebSocket connection lifecycle and message handling with improved stability.
+    
+    This is a singleton class to ensure consistent connection and error tracking across the application.
+    
+    Access the instance via:
+    - Constructor (first time requires all params)
+    - get_instance() (after initialization)
+    """
+    _instance = None
+    _lock = asyncio.Lock()
+
+    @classmethod
+    def get_instance(cls) -> Optional['WebSocketManager']:
+        """Get the singleton instance.
+        
+        Returns:
+            WebSocketManager: The singleton instance if initialized
+            None: If the manager hasn't been initialized yet
+        """
+        return cls._instance
+
+    def __new__(cls, *args, **kwargs):
+        """Ensure singleton instance."""
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
 
     def __init__(
         self,
@@ -51,6 +79,20 @@ class WebSocketManager:
         reconnect_interval: float = 1.0,
         message_queue_size: int = 1000,
     ):
+        """Initialize the WebSocket manager.
+        
+        Note: Due to singleton pattern, initialization only happens once.
+        Subsequent calls with different parameters will be ignored but logged as warnings.
+        """
+        if self._initialized:
+            # Log warning if trying to re-initialize with different parameters
+            logger.warning(
+                "Attempting to re-initialize WebSocketManager singleton with different parameters. "
+                "Using existing instance with original parameters. "
+                "Use WebSocketManager.get_instance() to access the singleton instance."
+            )
+            return
+
         self._transport = ws_transport
         self._state = WebSocketState.DISCONNECTED
         self._message_handlers = message_handlers or {}
@@ -66,6 +108,9 @@ class WebSocketManager:
         self._message_queue = asyncio.Queue(maxsize=message_queue_size)
         self._queue_processor_task: Optional[asyncio.Task] = None
         self._shutdown_event = asyncio.Event()
+
+        # Mark as initialized to prevent re-initialization
+        self._initialized = True
 
     @property
     def is_connected(self) -> bool:
