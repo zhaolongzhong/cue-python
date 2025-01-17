@@ -1,4 +1,5 @@
 """Scheduler service for managing scheduled tasks."""
+
 import uuid
 import asyncio
 import logging
@@ -8,9 +9,11 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class ScheduledTask:
     """Represents a scheduled task."""
+
     id: str
     instruction: str
     schedule_time: datetime.datetime
@@ -25,8 +28,10 @@ class ScheduledTask:
         if self.kwargs is None:
             self.kwargs = {}
 
+
 class SchedulerService:
     """Service for managing scheduled tasks."""
+
     _instance = None
 
     def __new__(cls):
@@ -37,29 +42,24 @@ class SchedulerService:
 
     def __init__(self):
         """Initialize scheduler service."""
-        if not hasattr(self, 'initialized'):
+        if not hasattr(self, "initialized"):
             self.tasks: Dict[str, ScheduledTask] = {}
             self.running = False
             self._task: Optional[asyncio.Task] = None
             self.initialized = True
 
     def schedule_task(
-        self,
-        instruction: str,
-        schedule_time: datetime.datetime,
-        callback: Callable,
-        *args,
-        **kwargs
+        self, instruction: str, schedule_time: datetime.datetime, callback: Callable, *args, **kwargs
     ) -> str:
         """Schedule a new task.
-        
+
         Args:
             instruction: Task instruction/description
             schedule_time: When to execute the task
             callback: Function to call when task is due
             *args: Positional arguments for callback
             **kwargs: Keyword arguments for callback
-            
+
         Returns:
             str: Task ID
         """
@@ -70,7 +70,7 @@ class SchedulerService:
             schedule_time=schedule_time,
             callback=callback,
             args=args,
-            kwargs=kwargs
+            kwargs=kwargs,
         )
         self.tasks[task_id] = task
         logger.info(f"Scheduled task {task_id} for {schedule_time}")
@@ -104,10 +104,7 @@ class SchedulerService:
         while self.running:
             now = datetime.datetime.now()
             # Find tasks that are due
-            due_tasks = [
-                task for task in self.tasks.values()
-                if not task.is_completed and task.schedule_time <= now
-            ]
+            due_tasks = [task for task in self.tasks.values() if not task.is_completed and task.schedule_time <= now]
 
             # Execute due tasks and wait for them to complete
             for task in due_tasks:
@@ -115,9 +112,9 @@ class SchedulerService:
 
             # Clean up tasks that have been completed for at least 5 seconds
             self.tasks = {
-                tid: task for tid, task in self.tasks.items()
-                if not (task.is_completed and task.completed_at and
-                       (now - task.completed_at).total_seconds() > 5)
+                tid: task
+                for tid, task in self.tasks.items()
+                if not (task.is_completed and task.completed_at and (now - task.completed_at).total_seconds() > 5)
             }
 
             await asyncio.sleep(1)  # Check every second
