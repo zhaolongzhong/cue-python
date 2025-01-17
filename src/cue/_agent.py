@@ -42,6 +42,7 @@ class Agent:
             AgentConfig(
                 model="claude-3-5-haiku-20241022" if "claude" in config.model else "gpt-4o-mini",
                 api_key=config.api_key,
+                use_cue=config.use_cue,
             )
         )
         self.system_context_manager = SystemContextManager(
