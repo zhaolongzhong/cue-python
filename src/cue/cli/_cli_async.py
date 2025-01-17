@@ -278,7 +278,6 @@ def _parse_args():
     parser = argparse.ArgumentParser(description="Cue CLI: An interactive asynchronous client.")
     parser.add_argument("-v", "--version", action="store_true", help="Print the version of the Cue client.")
     parser.add_argument("-r", "--run", action="store_true", help="Run the interactive CLI.")
-    parser.add_argument("-c", "--config", action="store_true", help="Print the default configuration.")
     parser.add_argument("-d", "--enable_debug_turn", action="store_true", help="Pause for each run loop turn.")
     parser.add_argument(
         "-client", "--client", action="store_true", help="Run as a second remote client with websocket."
@@ -291,7 +290,7 @@ def _parse_args():
     )
     parser.add_argument("--runner-id", type=str, metavar="ID", help="Specify runner ID for the runner mode")
     parser.add_argument(
-        "--config-path",
+        "-c",
         type=str,
         help="Path to a custom cue.config.json file",
     )
