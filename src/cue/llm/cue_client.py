@@ -30,7 +30,6 @@ class CueClient(LLMRequest):
         logger.debug(f"[CueClient] initialized with model: {self.model} {self.config.id}")
 
     async def send_completion_request(self, request: CompletionRequest) -> CompletionResponse:
-        self.tool_json = request.tool_json
         response = None
         error = None
 

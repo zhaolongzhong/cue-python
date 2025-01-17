@@ -34,7 +34,7 @@ class OpenAIClient(LLMRequest):
         logger.debug(f"[OpenAIClient] initialized with model: {self.model} {self.config.id}")
 
     async def send_completion_request(self, request: CompletionRequest) -> CompletionResponse:
-        self.tool_json = request.tool_json
+        self.tools = request.tools
         response = None
         error = None
         try:
@@ -70,7 +70,7 @@ class OpenAIClient(LLMRequest):
 
                 system_message = {"role": "system", "content": system_prompt}
                 system_message_tokens = TokenCounter.count_token(str(system_message))
-                tool_tokens = TokenCounter.count_token(str(request.tool_json))
+                tool_tokens = TokenCounter.count_token(str(request.tools))
                 message_tokens = TokenCounter.count_token(str(messages))
                 input_tokens = {
                     "system_tokens": system_message_tokens,
@@ -83,7 +83,7 @@ class OpenAIClient(LLMRequest):
                 )
                 messages.insert(0, system_message)
                 DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
-                if self.tool_json:
+                if self.tools:
                     if is_o1:
                         response = await self.client.chat.completions.create(
                             messages=messages,
@@ -91,7 +91,7 @@ class OpenAIClient(LLMRequest):
                             max_completion_tokens=request.max_tokens,
                             response_format=request.response_format,
                             tool_choice=request.tool_choice,
-                            tools=self.tool_json,
+                            tools=self.tools,
                         )
                     else:
                         response = await self.client.chat.completions.create(
@@ -101,7 +101,7 @@ class OpenAIClient(LLMRequest):
                             temperature=request.temperature,
                             response_format=request.response_format,
                             tool_choice=request.tool_choice,
-                            tools=self.tool_json,
+                            tools=self.tools,
                             parallel_tool_calls=request.parallel_tool_calls,
                         )
                 else:
@@ -141,7 +141,7 @@ class OpenAIClient(LLMRequest):
         For o1, filter out system message, combine merge them into a message with assistant role.
         """
         try:
-            tools = request.tool_json
+            tools = request.tools
             formatted_tools = "\n".join([json.dumps(tool) for tool in tools])
 
             messages = [msg for msg in request.messages if msg["role"] != "system"]

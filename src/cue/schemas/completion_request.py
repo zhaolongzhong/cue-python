@@ -14,7 +14,7 @@ class CompletionRequest(BaseModel):
     temperature: float = Field(default=0.8, ge=0, le=2, description="The sampling temperature for generation.")
     response_format_type: Optional[str] = "text"  # `json_object`
     response_format: Optional[Dict] = {"type": "text"}
-    tool_json: Optional[List[Dict]] = None  # tool json defintion
+    tools: Optional[List[Dict]] = None  # tools defintion
     tool_choice: Optional[str] = "auto"
     parallel_tool_calls: Optional[bool] = Field(
         default=True,

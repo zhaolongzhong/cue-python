@@ -30,7 +30,7 @@ class GeminiClient(LLMRequest):
         logger.debug(f"[GeminiClient] initialized with model: {self.model} {self.config.id}")
 
     async def send_completion_request(self, request: CompletionRequest) -> CompletionResponse:
-        self.tool_json = request.tool_json
+        self.tools = request.tools
         response = None
         error = None
         try:
@@ -52,7 +52,7 @@ class GeminiClient(LLMRequest):
 
             system_message = {"role": "system", "content": system_prompt}
             system_message_tokens = TokenCounter.count_token(str(system_message))
-            tool_tokens = TokenCounter.count_token(str(request.tool_json))
+            tool_tokens = TokenCounter.count_token(str(request.tools))
             message_tokens = TokenCounter.count_token(str(messages))
             input_tokens = {
                 "system_tokens": system_message_tokens,
@@ -62,11 +62,11 @@ class GeminiClient(LLMRequest):
             }
             logger.debug(
                 f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(system_message, indent=4)}"
-                f"\ntools_json: {json.dumps(request.tool_json, indent=4)}"
+                f"\ntools_json: {json.dumps(request.tools, indent=4)}"
             )
             messages.insert(0, system_message)
             DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
-            if self.tool_json:
+            if self.tools:
                 response = await self.client.chat.completions.create(
                     messages=messages,
                     model=self.model,
@@ -74,7 +74,7 @@ class GeminiClient(LLMRequest):
                     temperature=request.temperature,
                     response_format=request.response_format,
                     tool_choice=request.tool_choice,
-                    tools=self.tool_json,
+                    tools=self.tools,
                     # parallel_tool_calls=request.parallel_tool_calls, # not support
                 )
             else:

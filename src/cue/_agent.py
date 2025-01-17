@@ -61,7 +61,7 @@ class Agent:
         self.description = self._generate_description()
         self.other_agents = {}
         self.other_agents_info = ""
-        self.tool_json = None
+        self.tools = None
         self.system_message_builder = SystemMessageBuilder(self.id, self.config)
         self.setup_feedback()
         self.token_counter = TokenCounter()
@@ -134,7 +134,7 @@ class Agent:
 
         await tool_manager.initialize()
 
-        self.update_tool_json()
+        self.update_tools()
         self.system_message_param = self._get_system_message()
         try:
             await self.update_context()
@@ -151,16 +151,16 @@ class Agent:
         self.summarizer.update_context(self.system_context)
         self.state.has_initialized = True
 
-    def update_tool_json(self):
+    def update_tools(self):
         if self.config.tools:
             tools = self.config.tools.copy()
 
-            self.tool_json = self.tool_manager.get_tool_definitions(self.config.model, tools)
+            self.tools = self.tool_manager.get_tool_definitions(self.config.model, tools)
             if self.config.enable_mcp:
                 mcp_tools = self.tool_manager.get_mcp_tools(model=self.config.model)
                 if mcp_tools:
-                    self.tool_json.extend(mcp_tools)
-            self.state.update_token_stats("tool", str(self.tool_json))
+                    self.tools.extend(mcp_tools)
+            self.state.update_token_stats("tool", str(self.tools))
 
     async def clean_up(self):
         if self.tool_manager:
@@ -304,7 +304,7 @@ class Agent:
             model=self.config.model,
             messages=messages_dict,
             metadata=self.metadata,
-            tool_json=self.tool_json,
+            tools=self.tools,
             system_prompt_suffix=system_message_content,
             system_context=system_context,
         )
@@ -351,7 +351,7 @@ class Agent:
             self.config = self.config.model_copy()
             self.config.model = override_model
             self.client = LLMClient(self.config)
-            self.update_tool_json()
+            self.update_tools()
 
             self.context = DynamicContextManager(
                 model=self.config.model,

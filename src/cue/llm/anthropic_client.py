@@ -63,7 +63,7 @@ class AnthropicClient:
             system_messages[-1]["cache_control"] = {"type": "ephemeral"}
 
             system_message_tokens = TokenCounter.count_token(str(base_system_message))
-            tool_tokens = TokenCounter.count_token(str(request.tool_json))
+            tool_tokens = TokenCounter.count_token(str(request.tools))
             message_tokens = TokenCounter.count_token(str(messages))
 
             input_tokens = {
@@ -87,14 +87,14 @@ class AnthropicClient:
                 messages=messages, tag=f"{self.config.id} send_completion_request clean messages"
             )
             DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
-            if request.tool_json:
+            if request.tools:
                 response = await self.client.with_options(max_retries=2).beta.prompt_caching.messages.create(
                     model=request.model,
                     system=system_messages,
                     messages=messages,
                     max_tokens=request.max_tokens,
                     temperature=request.temperature,
-                    tools=request.tool_json,
+                    tools=request.tools,
                     betas=["prompt-caching-2024-07-31"],
                     tool_choice={"type": "auto", "disable_parallel_tool_use": True},
                 )
@@ -204,7 +204,7 @@ class AnthropicClient:
                 betas=["token-counting-2024-11-01"],
                 model=request.model,
                 system=[system_message],
-                tools=request.tool_json,
+                tools=request.tools,
                 messages=messages,
             )
             logger.debug(f"count_tokens - estimate input tokens: {result.model_dump_json()}")
