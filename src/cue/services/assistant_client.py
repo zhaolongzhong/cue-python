@@ -1,5 +1,7 @@
 import logging
-from typing import List, Union, Optional
+from typing import Dict, List, Union, Optional
+
+from cue.schemas.completion_response import CompletionResponse
 
 from ..schemas import (
     Assistant,
@@ -67,3 +69,10 @@ class AssistantClient(ResourceClient):
             return
         self._default_assistant_id = assistant.id
         return self._default_assistant_id
+
+    async def chat(self, chat_request: Dict) -> CompletionResponse:
+        response = await self._http.request("POST", "/assistants/chat", json=chat_request)
+        if not response:
+            logger.error("Chat request failed")
+            return
+        return CompletionResponse(**response)

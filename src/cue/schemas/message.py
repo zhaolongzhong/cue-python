@@ -28,6 +28,7 @@ class Author(BaseModel):
 
 class ContentType(str, Enum):
     text = "text"
+    code = "code"
     tool_message = "tool_message"
     tool_calls = "tool_calls"
     tool_result = "tool_result"
@@ -46,9 +47,12 @@ class Content(BaseModel):
     type: Optional[ContentType] = None
 
     content: Union[str, List[Dict[str, Any]], Dict[str, Any]] = Field(
-        ..., description="Message content in various formats"
+        ...,
+        description="Message content in various formats",
+        alias="text",
     )
 
+    language: Optional[str] = None
     tool_calls: Optional[List[Dict[str, Any]]] = Field(None, description="tool calls")
 
     def get_text(self) -> str:

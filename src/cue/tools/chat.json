@@ -1,0 +1,54 @@
+{
+    "type": "function",
+    "function": {
+        "name": "chat",
+        "description": "A chat tool that allows to chat with command",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "command": {
+                    "type": "string",
+                    "enum": [
+                        "chat",
+                        "schedule"
+                    ],
+                    "description": "The command to execute. Available commands: chat, schedule"
+                },
+                "content": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "description": "Text content for regular chat"
+                        },
+                        {
+                            "type": "object",
+                            "description": "Schedule content when command is 'schedule'",
+                            "properties": {
+                                "title": {
+                                    "type": "string",
+                                    "description": "Title of the schedule"
+                                },
+                                "prompt": {
+                                    "type": "string",
+                                    "description": "Prompt for the schedule"
+                                },
+                                "schedule": {
+                                    "type": "string",
+                                    "description": "Schedule timing specification"
+                                }
+                            }
+                        }
+                    ]
+                },
+                "conversation_id": {
+                    "type": "string",
+                    "description": "Optional ID for tracking the conversation thread"
+                }
+            },
+            "required": [
+                "command",
+                "content"
+            ]
+        }
+    }
+}
