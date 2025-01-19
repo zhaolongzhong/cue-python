@@ -9,6 +9,7 @@ from .email import EmailTool
 from .browse import BrowseTool
 from .memory import MemoryTool
 from .restart import RestartTool
+from .automate import AutomateTool
 from ..services import ServiceManager
 from .bash_tool import BashTool
 from .coordinate import CoordinateTool
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class Tool(Enum):
     Bash = BashTool.name
+    Automate = AutomateTool.name
     Edit = EditTool.name
     Python = PythonRunner.name
     Browse = BrowseTool.name
@@ -63,6 +65,7 @@ class ToolManager:
             self.tools[Tool.Memory.value] = MemoryTool(self.service_manager.memories)
             self.tools[Tool.ProjectContextTool.value] = ProjectContextTool(self.service_manager.assistants)
             self.tools[Tool.SystemTool.value] = SystemTool(self.service_manager.assistants)
+            self.tools[Tool.Automate.value] = AutomateTool(self.service_manager.automations)
         self._definition_cache: Dict[str, dict] = {}
         self.mcp = mcp  # disable for now
         self._mcp_tools_json = []
