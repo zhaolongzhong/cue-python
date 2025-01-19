@@ -25,6 +25,7 @@ from .transport import (
 from .memory_client import MemoryClient
 from .message_client import MessageClient
 from .assistant_client import AssistantClient
+from .automation_client import AutomationClient
 from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
@@ -89,6 +90,7 @@ class ServiceManager:
 
         # Initialize resource clients
         self.assistants = AssistantClient(self._http)
+        self.automations = AutomationClient(self._http)
         self.memories = MemoryClient(self._http)
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
@@ -291,6 +293,7 @@ class ServiceManager:
         self.memories.set_default_assistant_id(self.assistant_id)
         conversation_id = await self.conversations.create_default_conversation(self.assistant_id)
         self.messages.set_default_conversation_id(conversation_id)
+        self.automations.set_default_conversation_id(conversation_id)
         self.monitoring.set_context(assistant_id=self.assistant_id, conversation_id=conversation_id)
         await self._get_assistant(self.assistant_id)
 
