@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from datetime import datetime
 
 from pydantic import BaseModel
@@ -55,7 +55,7 @@ class MonitoringClient(ResourceClient):
         message: str,
         error_type: ErrorType,
         severity: str = "error",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: Optional[dict[str, Any]] = None,
         conversation_id: Optional[str] = None,
         assistant_id: Optional[str] = None,
     ) -> ErrorReportResponse:
@@ -93,7 +93,7 @@ class MonitoringClient(ResourceClient):
         exc: Exception,
         error_type: ErrorType = ErrorType.SYSTEM,
         severity: str = "error",
-        additional_context: Optional[Dict[str, Any]] = None,
+        additional_context: Optional[dict[str, Any]] = None,
     ) -> ErrorReportResponse:
         """
         Report an exception with automatic context capture

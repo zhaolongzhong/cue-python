@@ -3,10 +3,8 @@ from unittest.mock import Mock, AsyncMock
 
 import pytest
 
+from cue.types import Role, Author, Content
 from cue.schemas import (
-    Author,
-    Content,
-    AuthorRole,
     MessageCreate,
     MessageUpdate,
 )
@@ -52,7 +50,7 @@ async def test_create_message(mock_http_transport, base_message_data):
     client = MessageClient(http=mock_http_transport)
     client.set_default_conversation_id("conv_123")
 
-    message_create = MessageCreate(author=Author(role=AuthorRole.user), content=Content(content="Test message content"))
+    message_create = MessageCreate(author=Author(role="user"), content=Content(content="Test message content"))
 
     result = await client.create(message_create)
 
@@ -64,7 +62,7 @@ async def test_create_message(mock_http_transport, base_message_data):
     assert result.id == "msg_123"
     assert result.conversation_id == "conv_123"
     assert result.content.get_text() == "Test message content"
-    assert result.author.role == AuthorRole.user
+    assert result.author.role == Role.user
 
 
 @pytest.mark.asyncio
@@ -74,7 +72,7 @@ async def test_create_message_with_specific_conversation(mock_http_transport, ba
     client = MessageClient(http=mock_http_transport)
 
     message_create = MessageCreate(
-        conversation_id="conv_456", author=Author(role=AuthorRole.user), content=Content(content="Test message content")
+        conversation_id="conv_456", author=Author(role=Role.user), content=Content(content="Test message content")
     )
 
     result = await client.create(message_create)

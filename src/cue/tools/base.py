@@ -2,7 +2,7 @@
 import sys
 import json
 from abc import ABCMeta, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 from pathlib import Path
 from dataclasses import fields, replace, dataclass
 
@@ -52,7 +52,7 @@ class BaseTool(metaclass=ABCMeta):
         """Executes the tool with the given arguments."""
         ...
 
-    def to_json(self, model: str = "", use_file_definition: bool = True) -> Dict:
+    def to_json(self, model: str = "", use_file_definition: bool = True) -> dict:
         """Load or generate JSON parameters for the tool.
 
         Args:

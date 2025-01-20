@@ -3,11 +3,9 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_serializer
 
+from .run_usage import RunUsage
 
-class RunUsage(BaseModel):
-    input_tokens: int = 0
-    output_tokens: int = 0
-    cost: float = 0
+__all__ = ["RunUsageAndLimits"]
 
 
 class RunUsageAndLimits(BaseModel):

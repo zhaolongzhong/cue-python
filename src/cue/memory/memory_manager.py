@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from ..utils.token_counter import TokenCounter
 
@@ -110,7 +110,7 @@ Instructions for memory processing:
     def get_memories_param(self) -> Optional[dict]:
         return self.message_param
 
-    def get_memory_stats(self) -> Dict[str, Any]:
+    def get_memory_stats(self) -> dict[str, Any]:
         """Get statistics about the current memories."""
         total_tokens = self._get_total_tokens()
         return {

@@ -1,8 +1,8 @@
-from typing import Dict, List, Optional
+from typing import Optional
 
 from .llm import ChatModel
+from .types import AgentConfig, RunMetadata, CompletionResponse
 from .config import get_settings
-from .schemas import AgentConfig, RunMetadata, CompletionResponse
 from .utils.logs import _logger, setup_logging
 from .tools._tool import Tool
 from ._agent_manager import AgentManager
@@ -15,7 +15,7 @@ class AsyncCueClient:
     def __init__(self, config_file_path: Optional[str] = None):
         self.logger = _logger
         self.agent_manager = AgentManager()
-        self.agents: Dict[str, AgentConfig] = {}
+        self.agents: dict[str, AgentConfig] = {}
         self.active_agent_id: Optional[str] = None
         self.run_metadata = RunMetadata()
         self.agent_provider = AgentProvider(
@@ -35,7 +35,7 @@ class AsyncCueClient:
             ],
         )
 
-    async def initialize(self, configs: Optional[List[AgentConfig]] = None):
+    async def initialize(self, configs: Optional[list[AgentConfig]] = None):
         """Initialize the client with multiple agents."""
         self.logger.info("Initializing AsyncCueClient")
 
@@ -78,7 +78,7 @@ class AsyncCueClient:
             return response.get_text()
         return str(response)
 
-    def get_agent_ids(self) -> List[str]:
+    def get_agent_ids(self) -> list[str]:
         """Get a list of all available agent IDs."""
         return list(self.agents.keys())
 

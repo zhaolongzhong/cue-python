@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from mcp.types import CallToolResult
 from anthropic.types import ToolUseBlock
@@ -9,7 +9,7 @@ from openai.types.chat import ChatCompletionMessageToolCall as ToolCall
 from anthropic.types.beta import BetaTextBlockParam, BetaImageBlockParam, BetaToolResultBlockParam
 
 from ..tools import ToolResult, ToolManager
-from ..schemas import (
+from ..types import (
     Author,
     AgentConfig,
     CompletionRequest,
@@ -57,7 +57,7 @@ class LLMClient(LLMRequest):
     async def process_tools_with_timeout(
         self,
         tool_manager: ToolManager,
-        tool_calls: List[ToolCallToolUseBlock],
+        tool_calls: list[ToolCallToolUseBlock],
         timeout: int = 60,
         author: Optional[Author] = None,
     ) -> ToolResponseWrapper:
@@ -77,7 +77,10 @@ class LLMClient(LLMRequest):
                 raise ValueError(f"Unsupported tool call type: {type(tool_call)}")
 
             if not tool_manager.has_tool(tool_name):
-                error_message = f"Tool '{tool_name}' not found. The name can be only one of those names: {tool_manager.tools.keys()}."
+                error_message = (
+                    f"Tool '{tool_name}' not found. The name can be only one of those names: "
+                    f"{tool_manager.tools.keys()}."
+                )
                 logger.error(f"{error_message}, tool_call: {tool_call}")
                 tool_name = tool_name.replace(".", "")
                 tool_results.append(

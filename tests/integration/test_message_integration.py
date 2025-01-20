@@ -1,7 +1,7 @@
 import logging
 from uuid import uuid4
-from typing import AsyncGenerator
 from datetime import datetime
+from collections.abc import AsyncGenerator
 
 import pytest
 import pytest_asyncio

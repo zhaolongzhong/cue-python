@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, List, Union, Literal, ClassVar
+from typing import Any, Union, Literal, ClassVar
 
 import requests
 from bs4 import BeautifulSoup
@@ -159,10 +159,10 @@ class BrowseTool(BaseTool):
     def __init__(self):
         super().__init__()
 
-    async def __call__(self, command: str, args: list[str]) -> Union[str, List[Any]]:
+    async def __call__(self, command: str, args: list[str]) -> Union[str, list[Any]]:
         return await self.browse(command, args)
 
-    async def browse(self, command: str, args: list[str]) -> Union[str, List[Any]]:
+    async def browse(self, command: str, args: list[str]) -> Union[str, list[Any]]:
         """Browse the web to perform different actions like search, open URLs, or fetch news.
 
         Args:

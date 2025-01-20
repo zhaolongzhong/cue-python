@@ -2,22 +2,27 @@ import json
 import uuid
 import asyncio
 import logging
-from typing import Union, Callable, Optional, Awaitable
+from typing import Union, Optional
+from collections.abc import Callable, Awaitable
 
 import aiohttp
 from aiohttp import ClientResponseError, ClientConnectionError
 from pydantic import BaseModel
 
-from ..config import get_settings
-from ..schemas import (
-    Assistant,
+from ..types import (
     AgentConfig,
     FeatureFlag,
     RunMetadata,
+    EventMessage,
     MessageParam,
+    MessagePayload,
+    EventMessageType,
+    ClientEventPayload,
     CompletionResponse,
     ToolResponseWrapper,
 )
+from ..config import get_settings
+from ..schemas import Assistant
 from .transport import (
     AioHTTPTransport,
     AioHTTPWebSocketTransport,
@@ -29,7 +34,7 @@ from .automation_client import AutomationClient
 from .monitoring_client import MonitoringClient
 from .websocket_manager import WebSocketManager
 from .conversation_client import ConversationClient
-from ..schemas.event_message import EventMessage, MessagePayload, EventMessageType, ClientEventPayload
+from .message_storage_service import MessageStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +100,7 @@ class ServiceManager:
         self.conversations = ConversationClient(self._http)
         self.messages = MessageClient(self._http)
         self.monitoring = MonitoringClient(self._http)
+        self.message_storage_service = MessageStorageService(message_client=self.messages)
 
     @classmethod
     async def create(

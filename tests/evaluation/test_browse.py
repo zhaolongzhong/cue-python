@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import pytest
 
@@ -22,7 +21,7 @@ def agent_config(default_chat_model) -> AgentConfig:
 @pytest.mark.asyncio
 @pytest.mark.evaluation
 class TestBrowseTool:
-    def get_key_terms(self) -> List[str]:
+    def get_key_terms(self) -> list[str]:
         return ["example", "domain"]
 
     async def test_example(self, agent_config: AgentConfig) -> None:

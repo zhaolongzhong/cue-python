@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import TypeAdapter
 
@@ -47,7 +47,7 @@ class MemoryClient(ResourceClient):
 
     async def get_memories(
         self, assistant_id: Optional[str] = None, skip: int = 0, limit: int = 100
-    ) -> List[AssistantMemory]:
+    ) -> list[AssistantMemory]:
         """Get memories for an assistant in desc order by updated_at"""
         assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request("GET", f"/assistants/{assistant_id}/memories?skip={skip}&limit={limit}")
@@ -68,7 +68,7 @@ class MemoryClient(ResourceClient):
         )
         return AssistantMemory(**response)
 
-    async def delete_memories(self, memory_ids: List[str], assistant_id: Optional[str] = None) -> dict[str, Any]:
+    async def delete_memories(self, memory_ids: list[str], assistant_id: Optional[str] = None) -> dict[str, Any]:
         """Bulk delete multiple memories for an assistant."""
         assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request(

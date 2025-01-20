@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 from urllib.parse import urlencode
 
 from .transport import HTTPTransport, ResourceClient, WebSocketTransport
@@ -76,7 +76,7 @@ class AutomationClient(ResourceClient):
         is_enabled: Optional[bool] = None,
         skip: int = 0,
         limit: int = 100,
-    ) -> List[Automation]:
+    ) -> list[Automation]:
         """
         List automations with optional filters.
 

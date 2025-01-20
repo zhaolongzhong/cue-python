@@ -1,5 +1,5 @@
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from ..schemas import Message, MessageCreate, MessageUpdate
 from .transport import HTTPTransport, ResourceClient, WebSocketTransport
@@ -34,7 +34,7 @@ class MessageClient(ResourceClient):
         limit: int = 15,
         role: Optional[str] = None,
         content_type: Optional[str] = None,
-    ) -> List[Message]:
+    ) -> list[Message]:
         if not conversation_id:
             conversation_id = self.default_conversation_id
         if not conversation_id:

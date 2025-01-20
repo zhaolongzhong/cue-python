@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 
 from .llm import ChatModel
 from .tools import Tool
+from .types import AgentConfig, FeatureFlag, RunMetadata, CompletionResponse
 from ._agent import Agent
 from ._client import AsyncCueClient
-from .schemas import AgentConfig, FeatureFlag, RunMetadata, CompletionResponse
 from ._version import __title__, __version__
 from .utils.logs import setup_logging as _setup_logging
 from ._agent_manager import AgentManager

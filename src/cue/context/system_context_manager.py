@@ -1,7 +1,7 @@
 import json
 import logging
+from typing import Optional
 from datetime import datetime
-from typing_extensions import Optional
 
 from ..utils.token_counter import TokenCounter
 from ..services.service_manager import ServiceManager

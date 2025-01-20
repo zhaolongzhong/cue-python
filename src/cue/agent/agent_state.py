@@ -1,7 +1,7 @@
 """Agent state management module."""
 
 import logging
-from typing import Dict, Optional
+from typing import Optional
 from datetime import datetime
 
 from pydantic import Field, BaseModel, field_serializer
@@ -21,8 +21,8 @@ class TokenStats(BaseModel):
     memories: int = Field(default=0, description="Memory tokens")
     summaries: int = Field(default=0, description="Message summary tokens")
     messages: int = Field(default=0, description="Current message tokens")
-    context_window: Optional[Dict] = Field(default=None, description="Context window stats")
-    actual_usage: Dict = Field(default_factory=dict, description="Actual token usage from API")
+    context_window: Optional[dict] = Field(default=None, description="Context window stats")
+    actual_usage: dict = Field(default_factory=dict, description="Actual token usage from API")
 
 
 class AgentMetrics(BaseModel):
@@ -88,7 +88,7 @@ class AgentState:
         tokens = self._token_counter.count_token(content)
         setattr(self.metrics.token_stats, component, tokens)
 
-    def update_context_stats(self, stats: Dict) -> None:
+    def update_context_stats(self, stats: dict) -> None:
         """Update context window statistics.
 
         Args:
@@ -96,7 +96,7 @@ class AgentState:
         """
         self.metrics.token_stats.context_window = stats
 
-    def update_usage_stats(self, usage: Dict) -> None:
+    def update_usage_stats(self, usage: dict) -> None:
         """Update actual token usage statistics.
 
         Args:
@@ -104,7 +104,7 @@ class AgentState:
         """
         self.metrics.token_stats.actual_usage = usage
 
-    def get_token_stats(self) -> Dict:
+    def get_token_stats(self) -> dict:
         """Get current token statistics.
 
         Returns:
@@ -112,7 +112,7 @@ class AgentState:
         """
         return self.metrics.token_stats.model_dump()
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get current metrics.
 
         Returns:
@@ -134,4 +134,7 @@ class AgentState:
 
     def __str__(self) -> str:
         """String representation of agent state."""
-        return f"AgentState(initialized={self.has_initialized}, messages={self.metrics.total_messages}, errors={self.metrics.errors})"
+        return (
+            f"AgentState(initialized={self.has_initialized}, messages={self.metrics.total_messages}, "
+            f"errors={self.metrics.errors})"
+        )

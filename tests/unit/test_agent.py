@@ -5,10 +5,11 @@ from openai.types.chat.chat_completion import Choice, ChatCompletion
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
 
 from cue.tools import Tool, ToolManager
+from cue.types import Author, AgentConfig, FeatureFlag, RunMetadata, MessageParam, CompletionResponse
 from cue._agent import Agent
-from cue.schemas import Author, AgentConfig, FeatureFlag, RunMetadata, MessageParam, CompletionResponse
 from cue.services import ServiceManager
 from cue.llm.llm_model import ChatModel
+from cue.services.message_storage_service import MessageStorageService
 
 
 @pytest.fixture
@@ -149,6 +150,7 @@ async def test_build_context_for_next_agent(agent: Agent) -> None:
 async def test_service_manager_integration(agent: Agent) -> None:
     """Test service manager integration."""
     service_manager = Mock(spec=ServiceManager)
+    service_manager.message_storage_service = Mock(spec=MessageStorageService)
     service_manager.messages = Mock()
     service_manager.get_overwrite_model = Mock(return_value=ChatModel.GPT_4O_MINI.id)
 

@@ -1,22 +1,16 @@
 import logging
 from typing import Union, Optional
 
-from ..schemas import Message, MessageParam, MessageCreate
-from ..services.service_manager import ServiceManager
-from ..schemas.completion_response import CompletionResponse
-from ..schemas.tool_response_wrapper import ToolResponseWrapper
+from ..types import MessageParam, CompletionResponse, ToolResponseWrapper
+from ..schemas import Message, MessageCreate, MessageParamFactory, MessageCreateFactory
+from .message_client import MessageClient
 
 logger = logging.getLogger(__name__)
 
 
-class MessageManager:
-    def __init__(
-        self,
-    ):
-        self.service_manager: Optional[ServiceManager] = None
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
+class MessageStorageService:
+    def __init__(self, message_client: MessageClient):
+        self.message_client = message_client
 
     async def persist_message(
         self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]
@@ -29,7 +23,7 @@ class MessageManager:
             return message
 
         try:
-            message_create = message.to_message_create()
+            message_create = MessageCreateFactory.create_from(message)
             persisted_message = await self._persist_message(message_create)
             if persisted_message:
                 msg_id = persisted_message.id
@@ -46,11 +40,7 @@ class MessageManager:
         Args:
             message_create: The message data to persist
         """
-        if not self.service_manager:
-            logger.warning("Skip persisting message: service_manager is not set.")
-            return None
-
-        return await self.service_manager.messages.create(message_create)
+        return await self.message_client.create(message_create)
 
     async def get_messages_asc(self, limit: int = 10) -> list[MessageParam]:
         """
@@ -67,13 +57,10 @@ class MessageManager:
             messages = await message_manager.get_messages_asc(limit=10)
             # Messages are already in chronological order, ready for display
         """
-        if not self.service_manager:
-            logger.warning("Skip loading messages: service_manager is not set.")
-            return []
 
-        messages = await self.service_manager.messages.get_conversation_messages(limit=limit)
+        messages = await self.message_client.get_conversation_messages(limit=limit)
         message_params = [
-            MessageParam.from_message(message, force_str_content=True, truncate_length=250)
+            MessageParamFactory.from_message(message, force_str_content=True, truncate_length=250)
             for message in reversed(messages)  # Reverse the DESC order from DB to get ASC
         ]
 

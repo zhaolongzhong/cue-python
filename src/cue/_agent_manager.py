@@ -1,28 +1,26 @@
 import asyncio
 import logging
-from typing import Any, Dict, List, Union, Callable, Optional
+from typing import Any, Union, Optional
+from collections.abc import Callable
 
-from .utils import DebugUtils, console_utils
-from ._agent import Agent
-from .schemas import (
-    ErrorType,
+from .types import (
     AgentConfig,
     FeatureFlag,
     RunMetadata,
+    EventMessage,
     MessageParam,
     AgentTransfer,
+    MessagePayload,
+    EventMessageType,
     CompletionResponse,
-    ConversationContext,
     ToolResponseWrapper,
 )
+from .utils import DebugUtils, console_utils
+from ._agent import Agent
+from .schemas import ErrorType, ConversationContext
 from .services import ServiceManager
 from ._agent_loop import AgentLoop
 from .tools._tool import ToolManager, MCPServerManager
-from .schemas.event_message import (
-    EventMessage,
-    MessagePayload,
-    EventMessageType,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +35,7 @@ class AgentManager:
         self.prompt_callback = prompt_callback
         self.loop = loop or asyncio.get_event_loop()
         self.agent_loop = AgentLoop()
-        self._agents: Dict[str, Agent] = {}
+        self._agents: dict[str, Agent] = {}
         self.active_agent: Optional[Agent] = None
         self.primary_agent: Optional[Agent] = None
         self.service_manager: Optional[ServiceManager] = None
@@ -169,7 +167,8 @@ class AgentManager:
                 if isinstance(response, AgentTransfer):
                     if response.run_metadata:
                         logger.debug(
-                            f"handle tansfer to {response.to_agent_id}, run metadata: {self.run_metadata.model_dump_json(indent=4)}"
+                            f"handle tansfer to {response.to_agent_id}, run metadata:"
+                            f" {self.run_metadata.model_dump_json(indent=4)}"
                         )
                     await self._handle_transfer(response)
                     continue
@@ -211,7 +210,10 @@ class AgentManager:
 
         if agent_transfer.to_agent_id not in self._agents:
             available_agents = ", ".join(self._agents.keys())
-            error_msg = f"Target agent '{agent_transfer.to_agent_id}' not found. Transfer to primary: {agent_transfer.transfer_to_primary}. Available agents: {available_agents}"
+            error_msg = (
+                f"Target agent '{agent_transfer.to_agent_id}' not found. Transfer to primary: "
+                f"{agent_transfer.transfer_to_primary}. Available agents: {available_agents}"
+            )
             await self.active_agent.add_message(MessageParam(role="user", content=error_msg))
             logger.error(error_msg)
             if self.service_manager:
@@ -311,7 +313,8 @@ class AgentManager:
         agent = Agent(config=config)
         self._agents[agent.config.id] = agent
         logger.info(
-            f"register_agent {agent.config.id} (name: {config.id}), tool: {config.tools} available agents: {list(self._agents.keys())}"
+            f"register_agent {agent.config.id} (name: {config.id}), tool: {config.tools} "
+            f"available agents: {list(self._agents.keys())}"
         )
         if config.is_primary:
             self.primary_agent = agent
@@ -334,10 +337,3 @@ class AgentManager:
                 return agent
 
         raise Exception(f"Agent '{identifier}' not found")
-
-    def list_agents(self, exclude: List[str] = []) -> List[dict[str, str]]:
-        return [
-            {"id": agent.id, "description": agent.description}
-            for agent in self._agents.values()
-            if agent.id not in exclude
-        ]

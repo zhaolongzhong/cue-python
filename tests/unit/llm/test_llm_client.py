@@ -7,7 +7,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionMessage, ChatComplet
 from openai.types.chat.chat_completion_message_tool_call import Function
 
 from cue.tools import ToolManager
-from cue.schemas import Author, AgentConfig, FeatureFlag, CompletionRequest, CompletionResponse
+from cue.types import Author, AgentConfig, FeatureFlag, CompletionRequest, CompletionResponse
 from cue.tools._tool import Tool
 from cue.llm.llm_model import ChatModel
 from cue.llm.llm_client import LLMClient, ToolResult

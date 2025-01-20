@@ -2,7 +2,7 @@ import os
 import re
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 
 import openai
 from pydantic import BaseModel
@@ -10,8 +10,8 @@ from openai.types.chat import ChatCompletionMessageToolCall
 from openai.types.chat.chat_completion import ChatCompletion
 from openai.types.chat.completion_create_params import Function
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils, TokenCounter, generate_id
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .llm_request import LLMRequest
 from .system_prompt import SYSTEM_PROMPT
 from .openai_client_utils import JSON_FORMAT, O1_MODEL_SYSTEM_PROMPT_BASE
@@ -79,7 +79,8 @@ class OpenAIClient(LLMRequest):
                     "message_tokens": message_tokens,
                 }
                 logger.debug(
-                    f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(system_message, indent=4)}"
+                    f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} "
+                    "\nsystem_message: \n{json.dumps(system_message, indent=4)}"
                 )
                 messages.insert(0, system_message)
                 DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
@@ -136,7 +137,7 @@ class OpenAIClient(LLMRequest):
             logger.error(error.model_dump())
         return CompletionResponse(author=request.author, response=response, model=self.model, error=error)
 
-    def handle_o1_model(self, messages: List[Dict], request: CompletionRequest) -> List[Dict]:
+    def handle_o1_model(self, messages: list[dict], request: CompletionRequest) -> list[dict]:
         """
         For o1, filter out system message, combine merge them into a message with assistant role.
         """
@@ -153,7 +154,9 @@ class OpenAIClient(LLMRequest):
             system_prompt = O1_MODEL_SYSTEM_PROMPT_BASE.format(
                 json_format=JSON_FORMAT,
                 available_functions=formatted_tools,
-                additional_context=f"{request.system_prompt_suffix}{' ' + system_message_content if system_message_content else ''}",
+                additional_context=(
+                    f"{request.system_prompt_suffix}{{' ' + system_message_content if system_message_content else ''}}"
+                ),
             )
             system_prompt = f"{SYSTEM_PROMPT} {system_prompt}"
             # logger.debug(f"o1_system_prompt: {system_prompt}")
@@ -170,7 +173,7 @@ class OpenAIClient(LLMRequest):
         except Exception as e:
             logger.error(f"Error handling o1 model: {e}")
 
-    def extract_json_dict(self, string: str) -> Tuple[bool, Optional[Dict]]:
+    def extract_json_dict(self, string: str) -> tuple[bool, Optional[dict]]:
         """
         Extract and parse a JSON dictionary from a string that may contain other content.
         Handles JSON blocks with or without markdown code fence markers.
@@ -220,7 +223,7 @@ class OpenAIClient(LLMRequest):
                 logger.debug(f"JSON parsing failed after normalization: {e}")
                 return (False, None)
 
-    def convert_tool_call(self, chat_completion: ChatCompletion, tool_dict: Dict) -> ChatCompletion:
+    def convert_tool_call(self, chat_completion: ChatCompletion, tool_dict: dict) -> ChatCompletion:
         try:
             original = chat_completion.choices[0].message
             tool_call_id = self.generate_tool_id()

@@ -101,8 +101,8 @@ def run_in_container(
     client: docker.DockerClient,
     task_run: TaskRun,
     logger: logging.Logger,
+    environment: dict,
     retain_container: bool = True,
-    environment: dict = {},
 ) -> dict[str, Any]:
     start_time = time.time()
 

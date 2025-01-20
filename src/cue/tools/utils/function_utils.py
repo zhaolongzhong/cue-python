@@ -1,7 +1,7 @@
-from typing import Any, Dict
+from typing import Any
 
 
-def get_definition_by_model(func: Dict[str, Any], model: str) -> Dict[str, Any]:
+def get_definition_by_model(func: dict[str, Any], model: str) -> dict[str, Any]:
     """
     Convert function definition JSON based on model requirements.
 

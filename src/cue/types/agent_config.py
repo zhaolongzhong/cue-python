@@ -5,6 +5,8 @@ from pydantic import Field, BaseModel
 
 from .feature_flag import FeatureFlag
 
+__all__ = ["AgentConfig"]
+
 
 class AgentConfig(BaseModel):
     id: Optional[str] = "default_id"
@@ -13,7 +15,8 @@ class AgentConfig(BaseModel):
     is_primary: Optional[bool] = False
     feedback_path: Optional[Path] = None
     project_context_path: Optional[str] = None
-    # Detailed description of agent's role, capabilities, and collaboration patterns, which is used for other agents info
+    # Detailed description of agent's role, capabilities, and collaboration patterns,
+    # which is used for other agents info
     description: Optional[str] = None
     # System message defining agent's behavior, collaboration guidelines, and boundaries
     instruction: Optional[str] = None

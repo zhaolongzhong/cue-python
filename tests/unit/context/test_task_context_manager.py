@@ -3,7 +3,8 @@ from datetime import datetime
 
 import pytest
 
-from cue.schemas import Author, Content, Message, Metadata
+from cue.schemas import Message
+from cue.types.message import Author, Content, Metadata
 from cue.context.task_context_manager import TaskContextManager
 
 

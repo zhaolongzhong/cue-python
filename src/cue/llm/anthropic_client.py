@@ -7,8 +7,8 @@ import anthropic
 from anthropic.types import ToolUseBlock
 from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils, TokenCounter
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .system_prompt import SYSTEM_PROMPT
 from ..utils.id_generator import generate_id
 
@@ -81,7 +81,8 @@ class AnthropicClient:
                 self._inject_prompt_caching(messages)
 
             logger.debug(
-                f"{self.config.id} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(base_system_message, indent=4)}"
+                f"{self.config.id} input_tokens: {json.dumps(input_tokens, indent=4)} "
+                f"system_message: \n{json.dumps(base_system_message, indent=4)}"
             )
             DebugUtils.debug_print_messages(
                 messages=messages, tag=f"{self.config.id} send_completion_request clean messages"
@@ -145,7 +146,9 @@ class AnthropicClient:
         """
         Ensures the final message has the 'user' role if it is 'assistant'.
         Ensure the last message has 'user' role, otherwise, we will get error:
-        Your API request included an `assistant` message in the final position, which would pre-fill the `assistant` response. When using tools, pre-filling the `assistant` response is not supported.
+        Your API request included an `assistant` message in the final position,
+        which would pre-fill the `assistant` response. When using tools,
+        pre-filling the `assistant` response is not supported.
         """
         if messages and messages[-1]["role"] == "assistant":
             messages[-1]["role"] = "user"

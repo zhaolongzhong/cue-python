@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from cue.types import FeatureFlag, MessageParam
 from cue.utils import TokenCounter
-from cue.context import DynamicContextManager
-from cue.schemas import FeatureFlag, MessageParam
+from cue.context import ContextWindowManager
 from cue._agent_summarizer import ContentSummarizer
 
 
@@ -25,7 +25,7 @@ def summarizer():
 
 @pytest.fixture
 def context_manager(token_counter, summarizer):
-    manager = DynamicContextManager(model="gpt-4", max_tokens=1000, feature_flag=FeatureFlag(), summarizer=summarizer)
+    manager = ContextWindowManager(model="gpt-4", max_tokens=1000, feature_flag=FeatureFlag(), summarizer=summarizer)
     manager.token_counter = token_counter
     return manager
 
@@ -43,7 +43,6 @@ async def test_add_simple_message(context_manager):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip
 async def test_token_limit_enforcement(context_manager, token_counter):
     """Test that messages are removed when token limit is exceeded."""
     # Configure token counter to simulate exceeding limit

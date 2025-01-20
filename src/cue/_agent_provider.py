@@ -1,10 +1,10 @@
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Optional
 from pathlib import Path
 
+from .types import AgentConfig, FeatureFlag
 from .config import get_settings
-from .schemas import AgentConfig, FeatureFlag
 from .tools._tool import Tool
 from .llm.llm_model import ChatModel
 
@@ -86,7 +86,7 @@ class AgentProvider:
         }
         self.configs = None
 
-    def get_configs(self) -> Dict[str, AgentConfig]:
+    def get_configs(self) -> dict[str, AgentConfig]:
         if self.configs:
             return self.configs
 
@@ -111,7 +111,7 @@ class AgentProvider:
         primary_id = self.find_primary_agent_id(list(configs.values()))
         return configs.get(primary_id)
 
-    def _load_custom_configs(self) -> List[AgentConfig]:
+    def _load_custom_configs(self) -> list[AgentConfig]:
         """Load custom agent configurations from file and convert to AgentConfig objects."""
         try:
             with open(self.config_file, encoding="utf-8") as f:
@@ -142,7 +142,7 @@ class AgentProvider:
             logger.error(f"Error parsing '{self.config_file}': {e}")
             return []
 
-    def _create_agent_config(self, config_dict: Dict) -> AgentConfig:
+    def _create_agent_config(self, config_dict: dict) -> AgentConfig:
         """Convert dictionary to AgentConfig with validation."""
         required_fields = {"model"}
         missing_fields = required_fields - set(config_dict.keys())

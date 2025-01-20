@@ -116,7 +116,8 @@ def download_file(file_id, file_name, directory=".") -> str:
 
 
 def create_folder(folder_name, parent_folder_id=None) -> str:
-    """Creates a folder in the user's Drive. If parent_folder_id is provided, the folder is created under the specified parent folder."""
+    """Creates a folder in the user's Drive. If parent_folder_id is provided,
+    the folder is created under the specified parent folder."""
     service = get_service()
 
     file_metadata = {"name": folder_name, "mimeType": "application/vnd.google-apps.folder"}

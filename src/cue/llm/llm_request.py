@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from ..schemas import CompletionRequest
+from ..types import CompletionRequest
 
 
 class LLMRequest(ABC):

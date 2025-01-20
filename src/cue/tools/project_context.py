@@ -60,7 +60,8 @@ class ProjectContextTool(BaseTool):
                 raise ToolError("Parameter `new_content` is required for command: update")
             return await self.update(new_content=new_content)
         raise ToolError(
-            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
+            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
+            f"{', '.join(get_args(Command))}"
         )
 
     async def view(self) -> ToolResult:

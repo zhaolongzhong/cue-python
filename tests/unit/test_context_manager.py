@@ -1,18 +1,18 @@
 import logging
-from typing import Dict, Optional
+from typing import Optional
 
 import pytest
 
-from cue.context.context_manager import DynamicContextManager
 from cue.utils.mesage_params_utils import has_tool_calls, is_tool_result
+from cue.context.context_window_manager import ContextWindowManager
 
 
 @pytest.fixture
 def context_manager():
-    return DynamicContextManager(model="gpt-4o-mini", max_tokens=1000, batch_remove_percentage=0.25)
+    return ContextWindowManager(model="gpt-4o-mini", max_tokens=1000, batch_remove_percentage=0.25)
 
 
-def create_message(role: str, content: str, has_tool_calls: bool = False, tool_call_id: Optional[str] = None) -> Dict:
+def create_message(role: str, content: str, has_tool_calls: bool = False, tool_call_id: Optional[str] = None) -> dict:
     """Helper function to create test messages"""
     message = {"role": role, "content": content}
     if has_tool_calls:
@@ -20,7 +20,7 @@ def create_message(role: str, content: str, has_tool_calls: bool = False, tool_c
     return message
 
 
-def create_tool_result(content: str, tool_call_id: str) -> Dict:
+def create_tool_result(content: str, tool_call_id: str) -> dict:
     """Helper function to create tool result messages"""
     return {
         "tool_call_id": tool_call_id,

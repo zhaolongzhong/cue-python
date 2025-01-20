@@ -10,7 +10,9 @@ def test_has_tool_call():
         "content": [
             {
                 "type": "text",
-                "text": "<thinking>To answer this question, I will: 1. Use the get_weather tool to get the current weather in San Francisco. 2. Use the get_time tool to get the current time in the America/Los_Angeles timezone, which covers San Francisco, CA.</thinking>",
+                "text": """<thinking>To answer this question, I will: 1. Use the get_weather tool to get the current
+                weather in San Francisco. 2. Use the get_time tool to get the current time in the America/Los_Angeles
+                timezone, which covers San Francisco, CA.</thinking>""",
             },
             {
                 "type": "tool_use",
@@ -32,7 +34,9 @@ def test_is_tool_result():
         "content": [
             {
                 "type": "text",
-                "text": "<thinking>To answer this question, I will: 1. Use the get_weather tool to get the current weather in San Francisco. 2. Use the get_time tool to get the current time in the America/Los_Angeles timezone, which covers San Francisco, CA.</thinking>",
+                "text": """<thinking>To answer this question, I will: 1. Use the get_weather tool to get the current
+                weather in San Francisco. 2. Use the get_time tool to get the current time in the America/Los_Angeles
+                timezone, which covers San Francisco, CA.</thinking>""",
             },
             {
                 "type": "tool_use",

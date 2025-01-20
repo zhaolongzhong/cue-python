@@ -90,5 +90,8 @@ class GoogleDriveTool(BaseTool):
             return ToolResult(output=result)
         else:
             return ToolResult(
-                error="Invalid command. Please ensure the function signature is 'handle_drive_command(command, args)' with a valid command and corresponding arguments."
+                error=(
+                    "Invalid command. Please ensure the function signature is 'handle_drive_command(command, args)'"
+                    " with a valid command and corresponding arguments."
+                )
             )

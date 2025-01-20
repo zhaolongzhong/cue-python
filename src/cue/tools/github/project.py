@@ -3,7 +3,7 @@
 import json
 import logging
 import subprocess
-from typing import Dict, List, Optional
+from typing import Optional
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -48,8 +48,8 @@ class GitHubProject:
         """
         self.project_number = project_number
         self.owner = owner
-        self._items_cache: Optional[Dict[str, ProjectItem]] = None
-        self._fields_cache: Optional[Dict[str, str]] = None  # name -> id mapping
+        self._items_cache: Optional[dict[str, ProjectItem]] = None
+        self._fields_cache: Optional[dict[str, str]] = None  # name -> id mapping
 
         # Get project ID during initialization
         cmd = ["project", "view", str(project_number), "--owner", owner, "--format", "json"]
@@ -61,7 +61,7 @@ class GitHubProject:
         # Initialize fields cache
         self.refresh_fields_cache()
 
-    def _run_gh_cmd(self, cmd: List[str]) -> dict:
+    def _run_gh_cmd(self, cmd: list[str]) -> dict:
         """Run GitHub CLI command and return JSON response.
 
         Args:
@@ -169,7 +169,8 @@ class GitHubProject:
             if not item.content_id or not item.content_id.startswith("DI_"):
                 raise ValueError(f"Item {item_id} is not a draft issue")
 
-            # Use correct pattern: gh project item-edit --id <DI_ID> --title "<CURRENT_TITLE>" --body "<NEW_BODY>" --format json
+            # Use correct pattern: gh project item-edit --id <DI_ID> --title "<CURRENT_TITLE>" --body "<NEW_BODY>"
+            # --format json
             cmd = [
                 "project",
                 "item-edit",
@@ -268,7 +269,7 @@ class GitHubProject:
                 return item
         raise Exception("Failed to find created item")
 
-    def list_items(self) -> List[ProjectItem]:
+    def list_items(self) -> list[ProjectItem]:
         """List all items in the project.
 
         Returns:
@@ -277,7 +278,7 @@ class GitHubProject:
         self.refresh_cache()
         return list(self._items_cache.values())
 
-    def search_items(self, query: str) -> List[ProjectItem]:
+    def search_items(self, query: str) -> list[ProjectItem]:
         """Search for items by title (case-insensitive).
 
         Args:

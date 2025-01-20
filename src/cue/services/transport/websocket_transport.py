@@ -2,7 +2,7 @@ import json
 import random
 import asyncio
 import logging
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Optional, Protocol
 from typing_extensions import runtime_checkable
 
 import aiohttp
@@ -24,7 +24,7 @@ class WebSocketTransport(Protocol):
 
     async def send(self, message: str) -> None: ...
 
-    async def receive(self) -> Dict[str, Any]: ...
+    async def receive(self) -> dict[str, Any]: ...
 
     async def ping(self) -> None: ...
 
@@ -176,7 +176,7 @@ class AioHTTPWebSocketTransport(WebSocketTransport):
             logger.error(f"Error sending message: {str(e)}")
             raise WebSocketConnectionError(f"Failed to send message: {str(e)}")
 
-    async def receive(self) -> Dict[str, Any]:
+    async def receive(self) -> dict[str, Any]:
         """Receive message with connection check and error handling"""
         data = await self._message_queue.get()
         try:

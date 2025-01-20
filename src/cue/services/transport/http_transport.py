@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Optional, Protocol
+from typing import Any, Optional, Protocol
 from typing_extensions import runtime_checkable
 
 import aiohttp
@@ -13,7 +13,7 @@ class HTTPTransport(Protocol):
     """Protocol for HTTP transport operations"""
 
     async def request(
-        self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None
+        self, method: str, endpoint: str, data: Optional[dict[str, Any]] = None, params: Optional[dict[str, Any]] = None
     ) -> Any: ...
 
 
@@ -34,7 +34,7 @@ class AioHTTPTransport(HTTPTransport):
         )
 
     async def request(
-        self, method: str, endpoint: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None
+        self, method: str, endpoint: str, data: Optional[dict[str, Any]] = None, params: Optional[dict[str, Any]] = None
     ) -> Any:
         if not self.is_server_available:
             logger.error("Server is not available.")

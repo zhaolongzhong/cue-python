@@ -2,10 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from cue.types import AgentConfig, CompletionRequest, CompletionResponse
 from cue._agent_summarizer import ContentSummarizer
-from cue.schemas.agent_config import AgentConfig
-from cue.schemas.completion_request import CompletionRequest
-from cue.schemas.completion_response import CompletionResponse
 
 
 @pytest.fixture

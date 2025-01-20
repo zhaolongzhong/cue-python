@@ -11,9 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from rich.text import Text
 
+from ..types import RunMetadata, CompletionResponse
 from ..utils import DebugUtils, console_utils
 from ..config import get_settings
-from ..schemas import RunMetadata, CompletionResponse
 from ..utils.logs import setup_logging
 from ._cli_command import CliCommand, parse_command
 from .._agent_manager import AgentManager
@@ -132,7 +132,10 @@ class CLI:
         #     # Send bootstrap message to trigger bootstrap sequence
         #     await self.run_loop(
         #         self.agent_manager.primary_agent.id,
-        #         "This is bootstrap AUTO-EXECUTE ON STARTUP. Please access relevant context, review our previous session's work, and prepare a summary to begin our current session.",
+        #         (
+        #             "This is bootstrap AUTO-EXECUTE ON STARTUP. Please access relevant context, "
+        #             "review our previous session's work, and prepare a summary to begin our current session."
+        #         ),
         #         bootstrap_metadata,
         #     )
 

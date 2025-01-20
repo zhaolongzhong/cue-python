@@ -4,21 +4,16 @@ from typing import Any, Union, Optional
 
 from pydantic import BaseModel
 
+from ..types import FeatureFlag, MessageParam, CompletionResponse, ToolResponseWrapper
 from ..utils import DebugUtils, TokenCounter
-from ..schemas import FeatureFlag, MessageParam, CompletionResponse, ToolResponseWrapper
+from ..schemas import MessageFields
 from .._agent_summarizer import ContentSummarizer
 from ..utils.mesage_params_utils import has_tool_calls, is_tool_result
 
 logger = logging.getLogger(__name__)
 
 
-class MessageFields:
-    """Message core field names."""
-
-    MSG_ID = "msg_id"
-
-
-class DynamicContextManager:
+class ContextWindowManager:
     def __init__(
         self,
         model: str,
@@ -60,25 +55,6 @@ class DynamicContextManager:
     def _get_total_tokens(self) -> int:
         """Get the total token count for all messages in the current window."""
         return self.token_counter.count_messages_tokens(self.messages)
-
-    def _count_dict_tokens(self, data: Union[dict, Any]) -> int:
-        """Count tokens in a TypedDict or dictionary structure."""
-        return self.token_counter.count_dict_tokens(data)
-
-    def _get_total_tokens(self) -> int:
-        """Get the rough total token count for all messages in the current window."""
-        total_tokens = 0
-        for msg in self.messages:
-            if isinstance(msg, BaseModel):
-                tokens = self._count_tokens(msg.model_dump_json(exclude=[MessageFields.MSG_ID, "model"]))
-                total_tokens += tokens
-            elif isinstance(msg, dict):
-                tokens = self._count_dict_tokens(msg)
-                total_tokens += tokens
-            else:
-                logger.error(f"Unexpected type in _get_total_tokens: {type(msg)}")
-
-        return total_tokens
 
     def get_context_stats(self) -> dict[str, Any]:
         """Get statistics about the current context window."""
@@ -155,7 +131,8 @@ class DynamicContextManager:
             )
         else:
             raise Exception(
-                f"Only params, tool result, dict or BaseModel allowed to add message list, receive type: {type(message)}"
+                "Only params, tool result, dict or BaseModel allowed to add message list, "
+                f"receive type: {type(message)}"
             )
 
         if msg_id and (MessageFields.MSG_ID not in message_dict or not message_dict[MessageFields.MSG_ID]):
@@ -317,7 +294,7 @@ class DynamicContextManager:
 
         def get_message_tokens(idx):
             if idx not in message_tokens:
-                message_tokens[idx] = self._count_dict_tokens(self.messages[idx])
+                message_tokens[idx] = self.token_counter.count_dict_tokens(self.messages[idx])
             return message_tokens[idx]
 
         while removed_tokens < tokens_to_remove and current_idx < len(self.messages):

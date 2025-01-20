@@ -30,4 +30,4 @@ When Not to Call a Function: If the user's request does not require any of the a
 Available functions: {available_functions}
 
 {additional_context}
-"""
+"""  # noqa: E501

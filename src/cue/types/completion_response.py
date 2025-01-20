@@ -15,8 +15,9 @@ from anthropic.types.beta import (
 )
 from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
 
-from ..schemas.error import ErrorResponse
-from ..schemas.message import Author, Content, Metadata, ContentType, MessageCreate
+from .error import ErrorResponse
+
+__all__ = ["CompletionResponse", "CompletionUsage", "ToolCallToolUseBlock"]
 
 ToolCallToolUseBlock = Union[ChatCompletionMessageToolCall, ToolUseBlock]
 
@@ -184,7 +185,8 @@ class CompletionResponse:
                 completion_usage.cached_tokens = usage.prompt_tokens_details.cached_tokens
             return completion_usage
         raise InvalidResponseTypeError(
-            f"Expected AnthropicMessage or ChatCompletion, got {type(self.response).__name__}. Response: \n{self.response}"
+            f"Expected AnthropicMessage or ChatCompletion, got {type(self.response).__name__}. "
+            f"Response: \n{self.response}"
         )
 
     def __str__(self):
@@ -199,79 +201,22 @@ class CompletionResponse:
                 content = self._response_to_anthropic_params(response)
                 # Server can retrun empty content or array like `"content": []`
                 # Check for empty content (None, empty array, or empty string)
-                # If there is empty content, there will be 400 error like "all messages must have non-empty content except for the optional final assistant message"
+                # If there is empty content, there will be 400 error like "all messages must have non-empty content
+                # except for the optional final assistant message"
                 if not content or (isinstance(content, list) and len(content) == 0) or content == "":
                     return "EMPTY"
                 return BetaMessageParam(role="assistant", content=self._response_to_anthropic_params(response))
             elif isinstance(self.error, ErrorResponse):
                 return BetaMessageParam(role="assistant", content=error.model_dump_json())
             else:
-                print(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
+                raise ValueError(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
         else:
             if isinstance(self.response, ChatCompletion):
                 return self._response_to_chat_completion_params(self.response)
             elif isinstance(self.error, ErrorResponse):
                 return ChatCompletionAssistantMessageParam(role="assistant", content=error.model_dump_json())
             else:
-                print(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
-
-    def to_message_create(self) -> MessageCreate:
-        response = self.response
-        error = self.error
-
-        if "claude" in self.model:
-            if isinstance(response, (AnthropicMessage, PromptCachingBetaMessage)):
-                if isinstance(response, PromptCachingBetaMessage):
-                    author = Author(role=response.role)
-                    metadata = Metadata(model=response.model, payload=response.model_dump())
-                    processed_content = []
-                    has_tool_use = False
-
-                    for block in response.content:
-                        if isinstance(block, ToolUseBlock):
-                            has_tool_use = True
-                            processed_content.append(block.model_dump())
-                        elif isinstance(block, TextBlock):
-                            processed_content.append(block.model_dump())
-                        else:
-                            raise Exception(f"Unhandled content block type: {block}")
-
-                    content_type = ContentType.tool_use if has_tool_use else ContentType.text
-                    content = Content(type=content_type, content=processed_content)
-                    return MessageCreate(author=author, content=content, metadata=metadata)
-                else:
-                    raise Exception(f"Unhandled response: {response}")
-            elif isinstance(self.error, ErrorResponse):
-                author = Author(role="assistant")
-                content = Content(type=ContentType.text, content=error.model_dump_json())
-                metadata = Metadata(model=self.model)
-                return MessageCreate(author=author, content=content, metadata=metadata)
-            else:
-                raise Exception(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
-        else:
-            if isinstance(response, ChatCompletion):
-                message = response.choices[0].message
-                author = Author(role=message.role)
-                metadata = Metadata(model=response.model, payload=response.model_dump())
-                if message.tool_calls:
-                    content = Content(
-                        type=ContentType.tool_calls,
-                        content=message.content if message.content else "",
-                        tool_calls=[item.model_dump() for item in message.tool_calls],
-                    )
-                elif message.content:
-                    content = Content(type=ContentType.text, content=message.content)
-                else:
-                    raise Exception(f"Unhandled message: {message}")
-
-                return MessageCreate(author=author, content=content, metadata=metadata)
-            elif isinstance(self.error, ErrorResponse):
-                author = Author(role="assistant")
-                content = Content(content=error.model_dump_json())
-                metadata = Metadata(model=self.model)
-                return MessageCreate(author=author, content=content, metadata=metadata)
-            else:
-                raise Exception(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
+                raise ValueError(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
 
     def _response_to_anthropic_params(
         self,

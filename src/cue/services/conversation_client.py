@@ -1,5 +1,6 @@
 import logging
-from typing import List, Optional
+import builtins
+from typing import Optional
 
 from ..schemas import (
     Conversation,
@@ -34,7 +35,7 @@ class ConversationClient(ResourceClient):
         response = await self._http.request("GET", f"/conversations/{conversation_id}")
         return Conversation(**response)
 
-    async def list(self, skip: int = 0, limit: int = 50) -> List[Conversation]:
+    async def list(self, skip: int = 0, limit: int = 50) -> list[Conversation]:
         response = await self._http.request("GET", f"/conversations?skip={skip}&limit={limit}")
         return [Conversation(**conv) for conv in response]
 
@@ -63,7 +64,7 @@ class ConversationClient(ResourceClient):
 
     async def get_conversation_by_assistant_id(
         self, assistant_id: str, skip: int = 0, limit: int = 50
-    ) -> List[Conversation]:
+    ) -> builtins.list[Conversation]:
         response = await self._http.request(
             "GET", f"/assistants/{assistant_id}/conversations?skip={skip}&limit={limit}"
         )

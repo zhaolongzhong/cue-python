@@ -14,7 +14,7 @@ Key Features:
 - Proper error handling and validation
 """
 
-from typing import Dict, Literal, ClassVar, Optional, get_args
+from typing import Literal, ClassVar, Optional, get_args
 
 from .base import BaseTool, ToolError, ToolResult
 from .github.project import ProjectItem, GitHubProject
@@ -35,7 +35,7 @@ class GitHubProjectTool(BaseTool):
     def __init__(self):
         """Initialize tool with default project settings."""
         self._function = self.github_project
-        self._projects: Dict[int, GitHubProject] = {}
+        self._projects: dict[int, GitHubProject] = {}
         super().__init__()
 
     async def __call__(
@@ -209,7 +209,9 @@ class GitHubProjectTool(BaseTool):
                         status=update_status,
                     )
                     return ToolResult(
-                        output=f"Updated item in project {project_number}:\n{self._format_items([item], project_number)}"
+                        output=(
+                            f"Updated item in project {project_number}:\n{self._format_items([item], project_number)}"
+                        )
                     )
                 except Exception as e:
                     # Raise ToolError with the original error message
@@ -221,7 +223,10 @@ class GitHubProjectTool(BaseTool):
 
                 items = project.search_items(query)
                 return ToolResult(
-                    output=f"Found {len(items)} items in project {project_number}:\n{self._format_items(items, project_number)}"
+                    output=(
+                        f"Found {len(items)} items in project {project_number}:"
+                        f"\n{self._format_items(items, project_number)}"
+                    )
                 )
 
             elif command == "get":
@@ -234,7 +239,8 @@ class GitHubProjectTool(BaseTool):
                 return ToolResult(output=self._format_items([item], project_number))
 
             raise ToolError(
-                f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
+                f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
+                f"{', '.join(get_args(Command))}"
             )
 
         except Exception as e:

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from cue.schemas import MessageParam
+from cue.schemas import MessageParamFactory
 
 
 @dataclass
@@ -40,7 +40,7 @@ class TestMessageParam:
     def test_basic_conversion(self):
         """Test basic message conversion without any special options"""
         message = self.create_test_message(content="Hello, world!")
-        param = MessageParam.from_message(message)
+        param = MessageParamFactory.from_message(message=message)
 
         assert param.role == "user"
         assert param.content == "Hello, world!"
@@ -52,7 +52,7 @@ class TestMessageParam:
         dict_content = {"type": "text", "value": "Hello"}
         message = self.create_test_message(content=dict_content)
 
-        param = MessageParam.from_message(message, force_str_content=True)
+        param = MessageParamFactory.from_message(message=message, force_str_content=True)
         assert isinstance(param.content, str)
         assert "type" in param.content
         assert "Hello" in param.content
@@ -63,8 +63,8 @@ class TestMessageParam:
         message = self.create_test_message(content=long_content)
 
         truncate_length = 20
-        param = MessageParam.from_message(
-            message, force_str_content=True, truncate_length=truncate_length, show_visibility=False
+        param = MessageParamFactory.from_message(
+            message=message, force_str_content=True, truncate_length=truncate_length, show_visibility=False
         )
 
         assert len(param.content) <= truncate_length
@@ -75,7 +75,9 @@ class TestMessageParam:
         content = "This is a message that will be truncated with visibility info"
         message = self.create_test_message(content=content)
 
-        param = MessageParam.from_message(message, force_str_content=True, truncate_length=25, show_visibility=True)
+        param = MessageParamFactory.from_message(
+            message=message, force_str_content=True, truncate_length=25, show_visibility=True
+        )
 
         assert "% visible" in param.content
         assert len(param.content) <= 25
@@ -83,7 +85,7 @@ class TestMessageParam:
     def test_tool_role_conversion(self):
         """Test tool role conversion to assistant"""
         message = self.create_test_message(content="Tool result", role="tool")
-        param = MessageParam.from_message(message, force_str_content=True)
+        param = MessageParamFactory.from_message(message=message, force_str_content=True)
 
         assert param.role == "assistant"
 
@@ -93,8 +95,8 @@ class TestMessageParam:
         message = self.create_test_message(content=content)
 
         custom_indicator = " (...more)"
-        param = MessageParam.from_message(
-            message,
+        param = MessageParamFactory.from_message(
+            message=message,
             force_str_content=True,
             truncate_length=20,
             truncation_indicator=custom_indicator,
@@ -106,7 +108,7 @@ class TestMessageParam:
     def test_author_with_name(self):
         """Test handling of author name"""
         message = self.create_test_message(content="Hello", name="TestUser")
-        param = MessageParam.from_message(message)
+        param = MessageParamFactory.from_message(message=message)
 
         assert param.name == "TestUser"
 
@@ -122,8 +124,8 @@ class TestMessageParam:
         """Test different visibility percentage calculations"""
         message = self.create_test_message(content=content)
 
-        param = MessageParam.from_message(
-            message, force_str_content=True, truncate_length=truncate_length, show_visibility=True
+        param = MessageParamFactory.from_message(
+            message=message, force_str_content=True, truncate_length=truncate_length, show_visibility=True
         )
 
         assert f"{expected_visibility}% visible" in param.content

@@ -4,9 +4,9 @@ import logging
 import httpx
 from pydantic import BaseModel
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils
 from ..config import get_settings
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .llm_request import LLMRequest
 from .system_prompt import SYSTEM_PROMPT
 

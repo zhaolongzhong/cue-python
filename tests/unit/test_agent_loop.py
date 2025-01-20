@@ -4,11 +4,10 @@ from unittest.mock import Mock, AsyncMock
 import pytest
 from openai.types.chat import (
     ChatCompletion,
-    ChatCompletionAssistantMessageParam,
+    ChatCompletionAssistantMessageParam as MessageParam,
 )
 
-from cue._agent import Agent
-from cue.schemas import (
+from cue.types import (
     Author,
     AgentConfig,
     FeatureFlag,
@@ -17,6 +16,7 @@ from cue.schemas import (
     CompletionResponse,
     ToolResponseWrapper,
 )
+from cue._agent import Agent
 from cue._agent_loop import AgentLoop
 from cue.tools._tool import ToolManager
 
@@ -74,7 +74,7 @@ async def test_agent_loop_basic_flow(agent: Agent, tool_manager: ToolManager, ru
     agent_loop = AgentLoop()
 
     # Create mock response
-    msg = ChatCompletionAssistantMessageParam(role="assistant", content="Test response")
+    msg = MessageParam(role="assistant", content="Test response")
     chat_completion = ChatCompletion(
         id="test_id",
         model="gpt-4o-mini",
@@ -117,7 +117,7 @@ async def test_agent_loop_with_tool_calls(agent: Agent, tool_manager: ToolManage
     agent_loop = AgentLoop()
 
     # Set up multiple responses for consecutive run calls
-    tool_call_msg = ChatCompletionAssistantMessageParam(
+    tool_call_msg = MessageParam(
         role="assistant",
         content="Using tool",
         tool_calls=[
@@ -133,7 +133,7 @@ async def test_agent_loop_with_tool_calls(agent: Agent, tool_manager: ToolManage
         created=1234567890,
     )
 
-    final_msg = ChatCompletionAssistantMessageParam(role="assistant", content="Task completed")
+    final_msg = MessageParam(role="assistant", content="Task completed")
     final_completion = ChatCompletion(
         id="test_id2",
         model="gpt-4o-mini",
@@ -187,7 +187,7 @@ async def test_agent_loop_with_agent_transfer(agent: Agent, tool_manager: ToolMa
     agent.config.is_primary = False  # Set as non-primary agent
 
     # Mock response that should trigger transfer
-    msg = ChatCompletionAssistantMessageParam(role="assistant", content="Transferring to primary")
+    msg = MessageParam(role="assistant", content="Transferring to primary")
     chat_completion = ChatCompletion(
         id="test_id",
         model="gpt-4o-mini",
@@ -229,7 +229,7 @@ async def test_agent_loop_stop(agent: Agent, tool_manager: ToolManager, run_meta
     # Mock long-running operation
     async def mock_run(*args, **kwargs):
         await asyncio.sleep(1)
-        msg = ChatCompletionAssistantMessageParam(role="assistant", content="Response")
+        msg = MessageParam(role="assistant", content="Response")
         chat_completion = ChatCompletion(
             id="test_id",
             model="gpt-4o-mini",
@@ -271,7 +271,7 @@ async def test_agent_loop_turn_limit(agent: Agent, tool_manager: ToolManager):
         enable_turn_debug=False,
     )
 
-    msg = ChatCompletionAssistantMessageParam(role="assistant", content="Final response")
+    msg = MessageParam(role="assistant", content="Final response")
     chat_completion = ChatCompletion(
         id="test_id",
         model="gpt-4o-mini",
