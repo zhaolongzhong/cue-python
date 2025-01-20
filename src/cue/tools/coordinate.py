@@ -2,7 +2,7 @@ from typing import Literal, ClassVar, Optional
 from pathlib import Path
 
 from .base import BaseTool, ToolError, ToolResult
-from ..schemas.tool_response_wrapper import DEFAULT_MAX_MESSAGES, MAX_ALLOWED_MESSAGES, AgentTransfer
+from ..types.tool_response_wrapper import DEFAULT_MAX_MESSAGES, MAX_ALLOWED_MESSAGES, AgentTransfer
 
 Command = Literal["transfer"]
 
@@ -70,6 +70,9 @@ class CoordinateTool(BaseTool):
             else f"with up to {max_messages} previous messages (excluding this transfer command)"
         )
         return ToolResult(
-            output=f"Transfer request created successfully ({mode_desc}). Details: {transfer_info.model_dump_json(indent=2)}",
+            output=(
+                f"Transfer request created successfully ({mode_desc}). "
+                "Details: {transfer_info.model_dump_json(indent=2)}"
+            ),
             agent_transfer=transfer_info,
         )

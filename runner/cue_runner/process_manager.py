@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List, Tuple, Optional
+from typing import Optional
 from datetime import datetime, timedelta
 
 import psutil
@@ -19,7 +19,7 @@ class ProcessManager:
         self.pid_file = self.space["pid_file"]
         self.log_file = self.space["log_file"]
 
-    def _get_process_info(self, proc: psutil.Process, ws_info: Optional[str] = None) -> Dict:
+    def _get_process_info(self, proc: psutil.Process, ws_info: Optional[str] = None) -> dict:
         """Get detailed process information"""
         try:
             parent = psutil.Process(proc.ppid())
@@ -57,7 +57,7 @@ class ProcessManager:
         }
         return proc_info
 
-    def find_all_processes(self) -> List[Dict]:
+    def find_all_processes(self) -> list[dict]:
         """Find all running cue-related processes with parent-child relationships"""
         processes = []
         main_runner = None
@@ -95,7 +95,7 @@ class ProcessManager:
 
         return processes
 
-    def kill_all(self, force: bool = False) -> Dict[int, str]:
+    def kill_all(self, force: bool = False) -> dict[int, str]:
         """Kill all processes for this runner instance"""
         results = {}
         killed_pids = set()
@@ -188,7 +188,7 @@ class ProcessManager:
             except Exception as e:
                 logger.error(f"Error removing {key} file: {e}")
 
-    def is_runner_active(self) -> Tuple[bool, str]:
+    def is_runner_active(self) -> tuple[bool, str]:
         """Check if specific runner instance is active"""
         try:
             if not self.control_file.exists():
@@ -226,7 +226,7 @@ class ProcessManager:
         except Exception as e:
             return False, f"Error checking runner: {e}"
 
-    def _get_connections(self, proc: psutil.Process) -> Optional[List[Dict]]:
+    def _get_connections(self, proc: psutil.Process) -> Optional[list[dict]]:
         """Get process network connections"""
         try:
             connections = proc.connections(kind="inet")
@@ -260,7 +260,7 @@ class ProcessManager:
         except psutil.NoSuchProcess:
             return False
 
-    def get_runner_info(self) -> Dict:
+    def get_runner_info(self) -> dict:
         """Get runner information with better empty state handling"""
         try:
             status = {
@@ -303,7 +303,7 @@ class ProcessManager:
                 "space_dir": str(self.space["space_dir"]),
             }
 
-    def clean_stale_files(self) -> Dict[str, bool]:
+    def clean_stale_files(self) -> dict[str, bool]:
         """Clean up stale files and empty directories"""
         cleaned = {
             "control_file": False,

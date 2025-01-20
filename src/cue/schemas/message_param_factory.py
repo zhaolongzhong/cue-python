@@ -1,57 +1,18 @@
-from typing import Any, Dict, List, Union, Optional
+from typing import Optional
 
-from pydantic import Field, BaseModel
+from ..types import MessageParam
+from .message import Message
 
-from .message import Author, Content, Message, Metadata, ContentType, MessageCreate
 
-
-class MessageParam(BaseModel):
-    """
-    Represents a message parameter structure for communication between components.
-    Used for both in-memory operations and persistence mapping.
-    """
-
-    role: str = Field(
-        ...,
-        description="The role of the message author (e.g., 'user', 'assistant', 'system')",
-    )
-    content: Union[str, List[Dict[str, Any]], Dict[str, Any]] = Field(
-        ...,
-        description="Message content in various formats (text, structured data, or tool calls)",
-    )
-    name: Optional[str] = Field(
-        None,
-        description="Optional identifier or name for the message author",
-    )
-
-    # Persistence-related fields
-    model: Optional[str] = Field(
-        None,
-        description="Model identifier used for message generation in persistence layer",
-    )
-    msg_id: Optional[str] = Field(
-        None,
-        description="Unique identifier for the message in persistence layer",
-    )
-
-    def get_text(self) -> str:
-        return str(self.content)
-
-    def to_message_create(self) -> MessageCreate:
-        author = Author(role=self.role)
-        content = Content(type=ContentType.text, content=self.content)
-        metadata = Metadata(model=self.model)
-        return MessageCreate(author=author, content=content, metadata=metadata)
-
-    @classmethod
+class MessageParamFactory:
+    @staticmethod
     def from_message(
-        cls,
         message: Message,
         force_str_content: bool = False,
         truncate_length: Optional[int] = None,
         truncation_indicator: str = " ...",
         show_visibility: bool = True,
-    ) -> "MessageParam":
+    ) -> MessageParam:
         """
         Create a MessageParam instance from a Message.
 
@@ -85,7 +46,7 @@ class MessageParam(BaseModel):
             if "tool" == message.author.role:
                 role = "assistant"
 
-        return cls(
+        return MessageParam(
             role=role,
             content=content,
             name=message.author.name if hasattr(message.author, "name") else None,

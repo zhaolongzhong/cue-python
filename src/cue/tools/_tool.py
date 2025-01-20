@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Union, Optional
 
 from .base import BaseTool
 from .edit import EditTool
@@ -48,7 +48,7 @@ class ToolManager:
         service_manager: Optional[ServiceManager] = None,
         mcp: Optional[MCPServerManager] = None,
     ):
-        self.tools: Dict[str, BaseTool] = {
+        self.tools: dict[str, BaseTool] = {
             Tool.Bash.value: BashTool(),
             Tool.Edit.value: EditTool(),
             Tool.Python.value: PythonRunner(),
@@ -66,10 +66,10 @@ class ToolManager:
             self.tools[Tool.ProjectContextTool.value] = ProjectContextTool(self.service_manager.assistants)
             self.tools[Tool.SystemTool.value] = SystemTool(self.service_manager.assistants)
             self.tools[Tool.Automate.value] = AutomateTool(self.service_manager.automations)
-        self._definition_cache: Dict[str, dict] = {}
+        self._definition_cache: dict[str, dict] = {}
         self.mcp = mcp  # disable for now
         self._mcp_tools_json = []
-        self.mcp_tools_map: Dict[str, Dict[str, Any]] = {}
+        self.mcp_tools_map: dict[str, dict[str, Any]] = {}
 
     async def initialize(self):
         if self.mcp:
@@ -118,7 +118,7 @@ class ToolManager:
             tools.append(tool_dict)
         return tools
 
-    def get_tool_definitions(self, model: str, tools: Optional[Union[List[Tool], List[str]]] = None) -> list[dict]:
+    def get_tool_definitions(self, model: str, tools: Optional[Union[list[Tool], list[str]]] = None) -> list[dict]:
         """Iterate through the tools and gather their JSON configurations.
 
         Args:
@@ -159,7 +159,8 @@ class ToolManager:
         for tool_id in tools_to_iterate:
             if not self.has_tool(tool_id):
                 raise ValueError(
-                    f"Unsupported tool type: {type(tool)}, tool_id: {tool_id}, make sure to register first in ToolManager"
+                    f"Unsupported tool type: {type(tool)}, tool_id: {tool_id}, "
+                    "make sure to register first in ToolManager"
                 )
 
             cached_def = self._get_cached_definition(tool_id, model)

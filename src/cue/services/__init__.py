@@ -5,6 +5,7 @@ from .assistant_client import AssistantClient
 from .automation_client import AutomationClient
 from .monitoring_client import MonitoringClient
 from .conversation_client import ConversationClient
+from .message_storage_service import MessageStorageService
 
 __all__ = [
     "AssistantClient",
@@ -14,4 +15,5 @@ __all__ = [
     "MessageClient",
     "MonitoringClient",
     "ServiceManager",
+    "MessageStorageService",
 ]

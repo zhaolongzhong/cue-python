@@ -1,6 +1,7 @@
 from typing import Optional
 
-from .schemas import AgentConfig, MessageParam, ConversationContext
+from .types import AgentConfig, MessageParam
+from .schemas import ConversationContext
 
 
 class SystemMessageBuilder:
@@ -83,7 +84,7 @@ class SystemMessageBuilder:
     Share insights while remaining open to other perspectives
 
 Remember: Focus on creating genuine intellectual exchanges that advance understanding through balanced, thoughtful dialogue.
-"""
+"""  # noqa: E501
 
     def _get_bootstrap_instructions(self) -> str:
         """Get the bootstrap sequence instructions."""
@@ -123,7 +124,7 @@ For each completion request, the information is organized the following structur
   4. Dynamic Context (managed by DynamicContextManager with {self.config.max_context_tokens} token limit):
     - Message Summaries: summaries of truncated old messages
     - Current Messages (dynamic)
-"""
+"""  # noqa: E501
 
     def _get_self_reflection_instructions(self) -> str:
         """Get instructions for self-reflection and system improvement."""
@@ -246,7 +247,7 @@ For each completion request, the information is organized the following structur
 - Recent memories are automatically loaded with a context window 1000 tokens
 - Those memories will be refreshed it oldest messages are truncated when reaching token usage threshold
 
-Remember: Being proactive with memory management helps maintain conversation continuity and improves the quality of assistance across sessions."""
+Remember: Being proactive with memory management helps maintain conversation continuity and improves the quality of assistance across sessions."""  # noqa: E501
 
     def _get_project_context(self) -> str:
         """Get the project context information."""

@@ -1,9 +1,12 @@
 import json
 import logging
-from typing import Any, Dict, List, Union, Iterator, Optional, Generator
+from typing import Any, Union, Optional
+from collections.abc import Iterator, Generator
 
 import tiktoken
 from pydantic import BaseModel
+
+from ..schemas import MessageFields
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +82,7 @@ class TokenCounter:
             return any(self.contains_image_url_type(item) for item in data)
         return False
 
-    def count_message(self, message: Union[BaseModel, Dict[str, Any]]) -> int:
+    def count_message(self, message: Union[BaseModel, dict[str, Any]]) -> int:
         """Count tokens in a message object."""
         try:
             if isinstance(message, BaseModel):
@@ -113,6 +116,41 @@ class TokenCounter:
             logger.error(f"Error in token counting: {e}, data type: {type(data)}, data: {data}")
             return 0
 
-    def count_messages_tokens(self, messages: List[Union[BaseModel, Dict[str, Any]]]) -> int:
-        """Get the total token count for all messages."""
-        return sum(self.count_message(msg) for msg in messages)
+    def count_messages_tokens(self, messages: list[Union[BaseModel, dict[str, Any]]]) -> int:
+        """
+        Get the total token count for all messages, handling BaseModel and Dict separately.
+
+        Args:
+            messages: List of messages, each either a BaseModel or Dict
+
+        Returns:
+            int: Total number of tokens across all messages
+
+        Raises:
+            ValueError: If an unsupported message type is encountered
+        """
+        total_tokens = 0
+
+        for msg in messages:
+            try:
+                if isinstance(msg, BaseModel):
+                    # Convert BaseModel to dict excluding specific fields
+                    msg_dict = msg.model_dump_json(exclude={MessageFields.MSG_ID, MessageFields.MODEL})
+                    tokens = self._count_tokens(msg_dict)
+                elif isinstance(msg, dict):
+                    # For dict messages, exclude fields if they exist
+                    msg_copy = msg.copy()
+                    msg_copy.pop(MessageFields.MSG_ID, None)
+                    msg_copy.pop(MessageFields.MODEL, None)
+                    tokens = self.count_dict_tokens(msg_copy)
+                else:
+                    raise ValueError(f"Unsupported message type: {type(msg)}. Expected BaseModel or dict.")
+
+                total_tokens += tokens
+
+            except Exception as e:
+                logger.error(f"Error counting tokens for message: {e}")
+                raise
+
+        logger.debug(f"Total tokens counted: {total_tokens}")
+        return total_tokens

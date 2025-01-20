@@ -87,7 +87,8 @@ class MemoryTool(BaseTool):
         elif command == "delete":
             return await self.delete(memory_id)
         raise ToolError(
-            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
+            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
+            f"{', '.join(get_args(Command))}"
         )
 
     async def view(self, memory_id: Optional[str] = None, limit: Optional[int] = 10) -> ToolResult:

@@ -1,6 +1,6 @@
 import logging
 from enum import Enum
-from typing import Dict, Optional
+from typing import Optional
 from dataclasses import dataclass
 
 from rich.text import Text
@@ -27,7 +27,7 @@ class CliCommand(Enum):
 
 
 # Command documentation
-COMMAND_DOCS: Dict[CliCommand, CommandInfo] = {
+COMMAND_DOCS: dict[CliCommand, CommandInfo] = {
     CliCommand.STOP_RUN: CommandInfo(description="Stop the current run", usage="stop", examples=["stop"]),
     CliCommand.EXIT: CommandInfo(description="Exit the CLI", usage="exit or quit", examples=["exit", "quit"]),
     CliCommand.SNAPSHOT: CommandInfo(

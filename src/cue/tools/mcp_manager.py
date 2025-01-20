@@ -2,7 +2,7 @@ import os
 import json
 import asyncio
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -20,9 +20,9 @@ class ServerContext:
 class MCPServerManager:
     def __init__(self, config_path: str = "mcp_config.json"):
         self.config_path = config_path
-        self.servers: Dict[str, Dict[str, Any]] = {}
+        self.servers: dict[str, dict[str, Any]] = {}
         self._initialized = False
-        self._contexts: Dict[str, ServerContext] = {}
+        self._contexts: dict[str, ServerContext] = {}
         self.logger = logging.getLogger("MCPServerManager")
         self._task = None
         self._close_event = asyncio.Event()
@@ -124,7 +124,7 @@ class MCPServerManager:
             self.servers.clear()
             self.logger.info("MCPServerManager disconnected")
 
-    def _load_config(self) -> Dict[str, StdioServerParameters]:
+    def _load_config(self) -> dict[str, StdioServerParameters]:
         if not os.path.exists(self.config_path):
             self.logger.warning(f"MCP config file not found, skip mcp: {self.config_path}")
             return {}
@@ -154,7 +154,7 @@ class MCPServerManager:
             return None
         return self.servers[server_name]["tools"]
 
-    def list_tools_json(self) -> Dict[str, Any]:
+    def list_tools_json(self) -> dict[str, Any]:
         """
         Get a dictionary of all tools across all servers, removing server information.
         The tool name will be unique key even if it exists in multiple servers.
@@ -201,7 +201,7 @@ class MCPServerManager:
                         return server_name, tool
         return None
 
-    async def call_tool(self, server_name: str, tool_name: str, arguments: Dict[str, Any]) -> Optional[Any]:
+    async def call_tool(self, server_name: str, tool_name: str, arguments: dict[str, Any]) -> Optional[Any]:
         if server_name not in self.servers:
             raise ValueError(f"Server {server_name} not found")
 

@@ -4,11 +4,10 @@ import logging
 from typing import Optional
 
 import anthropic
-from anthropic.types import ToolUseBlock
-from anthropic.types.beta.prompt_caching import PromptCachingBetaMessage
+from anthropic.types import Message, ToolUseBlock
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils, TokenCounter
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .system_prompt import SYSTEM_PROMPT
 from ..utils.id_generator import generate_id
 
@@ -81,32 +80,31 @@ class AnthropicClient:
                 self._inject_prompt_caching(messages)
 
             logger.debug(
-                f"{self.config.id} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(base_system_message, indent=4)}"
+                f"{self.config.id} input_tokens: {json.dumps(input_tokens, indent=4)} "
+                f"system_message: \n{json.dumps(base_system_message, indent=4)}"
             )
             DebugUtils.debug_print_messages(
                 messages=messages, tag=f"{self.config.id} send_completion_request clean messages"
             )
             DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
             if request.tools:
-                response = await self.client.with_options(max_retries=2).beta.prompt_caching.messages.create(
+                response = await self.client.with_options(max_retries=2).messages.create(
                     model=request.model,
                     system=system_messages,
                     messages=messages,
                     max_tokens=request.max_tokens,
                     temperature=request.temperature,
                     tools=request.tools,
-                    betas=["prompt-caching-2024-07-31"],
                     tool_choice={"type": "auto", "disable_parallel_tool_use": True},
                 )
 
             else:
-                response = await self.client.with_options(max_retries=2).beta.prompt_caching.messages.create(
+                response = await self.client.with_options(max_retries=2).messages.create(
                     model=request.model,
                     system=system_messages,
                     messages=messages,
                     max_tokens=request.max_tokens,
                     temperature=request.temperature,
-                    betas=["prompt-caching-2024-07-31"],
                 )
         except anthropic.APIConnectionError as e:
             error = ErrorResponse(message=f"The server could not be reached. {e.__cause__}")
@@ -145,7 +143,9 @@ class AnthropicClient:
         """
         Ensures the final message has the 'user' role if it is 'assistant'.
         Ensure the last message has 'user' role, otherwise, we will get error:
-        Your API request included an `assistant` message in the final position, which would pre-fill the `assistant` response. When using tools, pre-filling the `assistant` response is not supported.
+        Your API request included an `assistant` message in the final position,
+        which would pre-fill the `assistant` response. When using tools,
+        pre-filling the `assistant` response is not supported.
         """
         if messages and messages[-1]["role"] == "assistant":
             messages[-1]["role"] = "user"
@@ -164,6 +164,8 @@ class AnthropicClient:
         # Loop through messages from newest to oldest
         for message in reversed(messages):  # Message 5 -> 4 -> 3 -> 2 -> 1
             if message["role"] == "user" and isinstance(content := message["content"], list):
+                if len(content) == 0:
+                    continue
                 if breakpoints_remaining:
                     # First 3 iterations (newest messages)
                     breakpoints_remaining -= 1
@@ -176,9 +178,7 @@ class AnthropicClient:
                     content[-1].pop("cache_control", None)  # Remove existing cache_control
                     break  # Stop processing older messages
 
-    def replace_tool_call_ids(
-        self, response_data: Optional[PromptCachingBetaMessage]
-    ) -> Optional[PromptCachingBetaMessage]:
+    def replace_tool_call_ids(self, response_data: Optional[Message]) -> Optional[Message]:
         """
         Replace tool call IDs in the response to:
         1) Ensure uniqueness by generating new IDs from the server if duplicates exist.
@@ -200,8 +200,7 @@ class AnthropicClient:
     async def count_tokens(self, request: CompletionRequest, system_message: dict, messages: list[dict]) -> int:
         try:
             # https://docs.anthropic.com/en/docs/build-with-claude/token-counting
-            result = await self.client.beta.messages.count_tokens(
-                betas=["token-counting-2024-11-01"],
+            result = await self.client.messages.count_tokens(
                 model=request.model,
                 system=[system_message],
                 tools=request.tools,

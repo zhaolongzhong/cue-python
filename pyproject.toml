@@ -16,7 +16,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "anthropic==0.40.0",
+    "anthropic==0.43.1",
     "openai==1.59.6",
     "tiktoken>=0.8.0",
     "google-auth==2.37.0",
@@ -48,7 +48,7 @@ dependencies = [
 dev = [
     "pyright>=1.1.370",
     "mypy>=1.10.1",
-    "ruff>=0.5.0",
+    "ruff>=0.9.0",
     "pytest",
     "pytest-asyncio>=0.24.0",
 ]
@@ -69,8 +69,12 @@ exclude = ["venv", ".venv", "alembic"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py310"
+output-format = "grouped"
+target-version = "py39"
 exclude = ["alembic"]
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
@@ -83,16 +87,8 @@ select = [
     "UP", # pyupgrade
 ]
 ignore = [
-    "E501",  # line too long, handled by black
-    "B008",  # do not perform function calls in argument defaults
-    "W191",  # indentation contains tabs
-    "B006",  # mutable defaults
-    "B904",  # Allow raising exceptions without from e, for HTTPException
-    "B024",  # Allow an abstract base class has no abstract methods
-    "UP007", # Ignore use of `X | Y` for type annotations
-    "UP006", # Ignore use of Dict
-    "UP035", # Ignore use of Dict or List
-    "UP038", # Ignore (X, Y)
+    "B008", # do not perform function calls in argument defaults
+    "B904", # Allow raising exceptions without from e, for HTTPException
 ]
 
 [tool.ruff.lint.isort]
@@ -101,9 +97,6 @@ length-sort-straight = true
 combine-as-imports = true
 extra-standard-library = ["typing_extensions"]
 known-first-party = ["cue", "tests", "environment", "evals"]
-
-[tool.ruff.format]
-docstring-code-format = true
 
 # Configure setuptools to include package data
 [tool.setuptools]

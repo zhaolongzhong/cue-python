@@ -1,12 +1,14 @@
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from pydantic import Field, BaseModel
 
-from .message import Author, Content, Metadata, ContentType, MessageCreate
+from .message import Author
 from .run_metadata import RunMetadata
 
 DEFAULT_MAX_MESSAGES = 6
 MAX_ALLOWED_MESSAGES = 12
+
+__all__ = ["AgentTransfer", "ToolResponseWrapper"]
 
 
 class AgentTransfer(BaseModel):
@@ -18,7 +20,7 @@ class AgentTransfer(BaseModel):
         le=MAX_ALLOWED_MESSAGES,
         description="Maximum number of messages to transfer. 0 means using only the message field",
     )
-    context: Optional[Union[str, List]] = None
+    context: Optional[Union[str, list]] = None
     transfer_to_primary: bool = False
     run_metadata: Optional[RunMetadata] = None
 
@@ -29,7 +31,7 @@ class ToolResponseWrapper(BaseModel):
         description="Unique identifier for the message in persistence layer",
     )
     author: Optional[Author] = None
-    tool_messages: Optional[List[dict]] = None
+    tool_messages: Optional[list[dict]] = None
     tool_result_message: Optional[dict] = None
     agent_transfer: Optional[AgentTransfer] = None
     base64_images: Optional[list] = None
@@ -47,17 +49,3 @@ class ToolResponseWrapper(BaseModel):
                     text += f"{message.get('text', '')}\n"
 
         return text.strip()
-
-    def to_message_create(self) -> MessageCreate:
-        if "claude" in self.model:
-            author = Author(role="user")
-            # tool_result_message = {"role": "user", "content": tool_results}
-
-            content = Content(type=ContentType.tool_result, content=self.tool_result_message["content"])
-            metadata = Metadata(model=self.model)
-            return MessageCreate(author=author, content=content, metadata=metadata)
-        else:
-            author = Author(role="tool")
-            content = Content(type=ContentType.tool_message, content=self.tool_messages)
-            metadata = Metadata(model=self.model)
-            return MessageCreate(author=author, content=content, metadata=metadata)

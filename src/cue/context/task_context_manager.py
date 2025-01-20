@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from datetime import datetime
 
 from cue.services.service_manager import ServiceManager
@@ -110,7 +110,7 @@ class TaskContextManager:
 
         return "TASK_PROGRESS"
 
-    def add_task_messages(self, messages: List[Message]) -> None:
+    def add_task_messages(self, messages: list[Message]) -> None:
         """
         Update task context with new messages while respecting token limits.
         Messages are assumed to be already sorted by recency (newest to oldest).
@@ -195,7 +195,7 @@ class TaskContextManager:
         """Get the task context as a message parameter."""
         return self.message_param
 
-    def get_task_stats(self) -> Dict[str, Any]:
+    def get_task_stats(self) -> dict[str, Any]:
         """Get statistics about the current task context."""
         total_tokens = self._get_total_tokens()
         return {

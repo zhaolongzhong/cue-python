@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -11,7 +10,7 @@ class RunnerConfig:
     DEFAULT_RUNNER_ID = "default"
 
     @classmethod
-    def get_runner_space(cls, runner_id: str) -> Dict[str, Path]:
+    def get_runner_space(cls, runner_id: str) -> dict[str, Path]:
         """Get dedicated paths for a specific runner"""
         runner_dir = cls.RUNNERS_DIR / runner_id
         runner_dir.mkdir(parents=True, exist_ok=True)
@@ -25,7 +24,7 @@ class RunnerConfig:
         }
 
     @classmethod
-    def get_all_runners(cls) -> List[str]:
+    def get_all_runners(cls) -> list[str]:
         """Get list of all runner IDs, filtering empty directories"""
         if not cls.RUNNERS_DIR.exists():
             return []

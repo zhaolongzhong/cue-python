@@ -1,15 +1,14 @@
 import json
 import asyncio
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from mcp.types import CallToolResult
-from anthropic.types import ToolUseBlock
+from anthropic.types import ToolUseBlock, TextBlockParam, ImageBlockParam, ToolResultBlockParam
 from openai.types.chat import ChatCompletionMessageToolCall as ToolCall
-from anthropic.types.beta import BetaTextBlockParam, BetaImageBlockParam, BetaToolResultBlockParam
 
 from ..tools import ToolResult, ToolManager
-from ..schemas import (
+from ..types import (
     Author,
     AgentConfig,
     CompletionRequest,
@@ -57,7 +56,7 @@ class LLMClient(LLMRequest):
     async def process_tools_with_timeout(
         self,
         tool_manager: ToolManager,
-        tool_calls: List[ToolCallToolUseBlock],
+        tool_calls: list[ToolCallToolUseBlock],
         timeout: int = 60,
         author: Optional[Author] = None,
     ) -> ToolResponseWrapper:
@@ -77,7 +76,10 @@ class LLMClient(LLMRequest):
                 raise ValueError(f"Unsupported tool call type: {type(tool_call)}")
 
             if not tool_manager.has_tool(tool_name):
-                error_message = f"Tool '{tool_name}' not found. The name can be only one of those names: {tool_manager.tools.keys()}."
+                error_message = (
+                    f"Tool '{tool_name}' not found. The name can be only one of those names: "
+                    f"{tool_manager.tools.keys()}."
+                )
                 logger.error(f"{error_message}, tool_call: {tool_call}")
                 tool_name = tool_name.replace(".", "")
                 tool_results.append(
@@ -167,7 +169,7 @@ class LLMClient(LLMRequest):
 
     def create_success_response(self, tool_id: str, result: ToolResult, tool_name: Optional[str] = None):
         if "claude" in self.model:
-            tool_result_content: list[BetaTextBlockParam | BetaImageBlockParam] | str = []
+            tool_result_content: list[TextBlockParam | ImageBlockParam] | str = []
             is_error = False
             if result.error:
                 is_error = True
@@ -222,7 +224,7 @@ class LLMClient(LLMRequest):
 
     def create_error_response(self, tool_id: str, error_message: str, tool_name: str):
         if "claude" in self.model:
-            result_param = BetaToolResultBlockParam(
+            result_param = ToolResultBlockParam(
                 tool_use_id=tool_id, content=error_message, type="tool_result", is_error=True
             )
             return result_param

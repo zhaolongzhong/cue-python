@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 from textwrap import dedent, indent
 
 from ..schemas.assistant_memory import RelevantMemory, AssistantMemory
@@ -51,7 +51,7 @@ class MemoryFormatter:
 
     @staticmethod
     def format_memory_list(
-        memories: List[Union[AssistantMemory, RelevantMemory]],
+        memories: list[Union[AssistantMemory, RelevantMemory]],
         include_scores: bool = True,
         include_metadata: bool = False,
         date_format: str = "%Y-%m-%d %H:%M:%S",
@@ -81,7 +81,8 @@ class MemoryFormatter:
             summary = dedent(f"""
                 Memory Search Results
                 Total Memories: {len(memories)}
-                Date Range: {memories[-1].updated_at.strftime(date_format)} to {memories[0].updated_at.strftime(date_format)}
+                Date Range: {memories[-1].updated_at.strftime(date_format)} to
+                {memories[0].updated_at.strftime(date_format)}
                 """).strip()
             parts.append(summary)
 

@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Optional
 from datetime import datetime
 
 from pydantic import Field, BaseModel
@@ -6,7 +6,7 @@ from pydantic import Field, BaseModel
 
 class AssistantMemoryBase(BaseModel):
     content: str
-    metadata: Optional[Dict] = None
+    metadata: Optional[dict] = None
 
 
 class AssistantMemoryCreate(AssistantMemoryBase):
@@ -15,7 +15,7 @@ class AssistantMemoryCreate(AssistantMemoryBase):
 
 class AssistantMemoryUpdate(BaseModel):
     content: Optional[str] = None
-    metadata: Optional[Dict] = None
+    metadata: Optional[dict] = None
 
 
 class AssistantMemoryInDBBase(AssistantMemoryBase):

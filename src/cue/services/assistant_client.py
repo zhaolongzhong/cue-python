@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union, Optional
+from typing import Union, Optional
 
 from ..schemas import (
     Assistant,
@@ -51,7 +51,7 @@ class AssistantClient(ResourceClient):
         )
         return Assistant(**response)
 
-    async def list(self, skip: int = 0, limit: int = 100) -> List[Assistant]:
+    async def list(self, skip: int = 0, limit: int = 100) -> list[Assistant]:
         response = await self._http.request("GET", f"/assistants?skip={skip}&limit={limit}")
         return [Assistant(**asst) for asst in response]
 

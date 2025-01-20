@@ -1,6 +1,5 @@
 """Tests for agent state management."""
 
-from typing import Dict
 from datetime import datetime
 
 from cue.agent import AgentState, TokenStats, AgentMetrics
@@ -26,7 +25,7 @@ def test_token_stats_defaults():
     assert stats.summaries == 0
     assert stats.messages == 0
     assert stats.context_window is None
-    assert isinstance(stats.actual_usage, Dict)
+    assert isinstance(stats.actual_usage, dict)
     assert len(stats.actual_usage) == 0
 
 
@@ -100,7 +99,7 @@ def test_get_token_stats():
     """Test getting token statistics."""
     state = AgentState()
     stats = state.get_token_stats()
-    assert isinstance(stats, Dict)
+    assert isinstance(stats, dict)
     assert "system" in stats
     assert "tool" in stats
     assert "project" in stats
@@ -113,7 +112,7 @@ def test_get_metrics():
     """Test getting metrics."""
     state = AgentState()
     metrics = state.get_metrics()
-    assert isinstance(metrics, Dict)
+    assert isinstance(metrics, dict)
     assert "token_stats" in metrics
     assert "start_time" in metrics
     assert "total_messages" in metrics

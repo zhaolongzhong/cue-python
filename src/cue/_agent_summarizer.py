@@ -2,11 +2,10 @@ import logging
 from typing import Optional
 from datetime import datetime
 
+from .types import AgentConfig, CompletionRequest
 from .utils import DebugUtils, TokenCounter, record_usage
 from .llm.llm_client import LLMClient
-from .schemas.agent_config import AgentConfig
 from .utils.mesage_params_utils import get_text_from_message_params
-from .schemas.completion_request import CompletionRequest
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +61,10 @@ class ContentSummarizer:
         """
         # Build the prompt with default instruction and optional custom instruction
         base_instruction = """
-Those messages above will be truncated from message list, please utilize system message and context info to summarize those content by extracting useful info.
-This summaries will be added to the beginning of the message list again. Be specific on details such as filename or path etc, and be concise.
+Those messages above will be truncated from message list,
+please utilize system message and context info to summarize those content by extracting useful info.
+This summaries will be added to the beginning of the message list again. Be specific on details
+such as filename or path etc, and be concise.
 """
         final_instruction = f"{base_instruction} {instruction}" if instruction else base_instruction
 

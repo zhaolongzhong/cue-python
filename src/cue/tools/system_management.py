@@ -5,7 +5,7 @@ Manages system self-operations like restart through control file in runner space
 import os
 import json
 import logging
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Optional
 from pathlib import Path
 from datetime import datetime
 
@@ -52,7 +52,7 @@ class SystemManagement:
 
         return None
 
-    def _find_all_runners(self) -> Dict[str, Path]:
+    def _find_all_runners(self) -> dict[str, Path]:
         """Find all active runners and their control files"""
         runners = {}
         base_dir = Path("/tmp/cue_runners")
@@ -109,7 +109,7 @@ class SystemManagement:
             logger.error(f"Failed to request restart: {e}")
             return False
 
-    async def get_status(self) -> Optional[Dict[str, Any]]:
+    async def get_status(self) -> Optional[dict[str, Any]]:
         """
         Get current status from control file
 
@@ -126,7 +126,7 @@ class SystemManagement:
             logger.error(f"Failed to get status: {e}")
             return None
 
-    async def get_all_statuses(self) -> Dict[str, Dict[str, Any]]:
+    async def get_all_statuses(self) -> dict[str, dict[str, Any]]:
         """Get status of all active runners"""
         statuses = {}
         for runner_id, control_file in self._find_all_runners().items():
@@ -163,7 +163,7 @@ class SystemManagement:
         logger.warning(f"Timeout waiting for runner '{self.runner_id}' restart")
         return False
 
-    async def check_health(self) -> Tuple[bool, str]:
+    async def check_health(self) -> tuple[bool, str]:
         """
         Check health of the runner
 

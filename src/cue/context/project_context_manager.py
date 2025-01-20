@@ -1,6 +1,6 @@
 import logging
+from typing import Optional
 from pathlib import Path
-from typing_extensions import Optional
 
 from ..utils.token_counter import TokenCounter
 from ..services.service_manager import ServiceManager
@@ -58,14 +58,20 @@ class ProjectContextManager:
         if self.pre_context and not self._project_context:
             self.message_params = {
                 "role": "user",
-                "content": f"Project context path: {self.path} <project_context></project_context>, the content in the file has been overwritten with empty, if this is not expected please revert or update, here is previous context: <pre_project_context>{self.pre_context}</pre_project_context> {token_context}",
+                "content": (
+                    f"Project context path: {self.path} <project_context></project_context>, "
+                    "the content in the file has been overwritten with empty, if this is not expected "
+                    "please revert or update, here is previous context: "
+                    f"<pre_project_context>{self.pre_context}</pre_project_context> {token_context}"
+                ),
             }
             self.pre_context = None
         else:
             content_prefix = f"Project context path: {self.path} " if not self.service_manager else ""
             self.message_params = {
                 "role": "user",
-                "content": f"{content_prefix}<project_context>\n{self._project_context}\n</project_context>{token_context}",
+                "content": f"{content_prefix}<project_context>\n{self._project_context}\n</project_context>\n"
+                f"{token_context}",
             }
             self.pre_context = self.message_params
 

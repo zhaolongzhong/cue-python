@@ -3,6 +3,18 @@ from typing import Union, Optional
 
 from pydantic import Field, BaseModel, ConfigDict
 
+__all__ = [
+    "EventMessageType",
+    "ClientEventPayload",
+    "PingPongEventPayload",
+    "MessagePayload",
+    "GenericMessagePayload",
+    "MessageChunkEventPayload",
+    "MessageEventPayload",
+    "EventPayload",
+    "EventMessage",
+]
+
 
 class EventMessageType(str, Enum):
     GENERIC = "generic"
@@ -14,6 +26,8 @@ class EventMessageType(str, Enum):
     PING = "ping"
     PONG = "pong"
     ERROR = "error"
+    MESSAGE = "message"
+    MESSAGE_CHUNK = "message_chunk"
 
 
 class MessagePayloadBase(BaseModel):
@@ -23,26 +37,33 @@ class MessagePayloadBase(BaseModel):
     websocket_request_id: Optional[str] = Field(None, description="Request tracking ID")
     metadata: Optional[dict] = Field(None, description="Metadata related to the message")
     payload: Optional[dict] = None
+    user_id: Optional[str] = None
 
     model_config = ConfigDict(frozen=True)
 
 
 class GenericMessagePayload(MessagePayloadBase):
-    user_id: Optional[str] = Field(None, description="User identifier")
+    pass
 
 
 class MessagePayload(MessagePayloadBase):
-    user_id: Optional[str] = None
     msg_id: Optional[str] = None
 
 
 class ClientEventPayload(MessagePayloadBase):
     client_id: str
-    user_id: Optional[str] = None
 
 
 class PingPongEventPayload(MessagePayloadBase):
     type: str
+
+
+class MessageChunkEventPayload(MessagePayloadBase):
+    pass
+
+
+class MessageEventPayload(MessagePayloadBase):
+    pass
 
 
 EventPayload = Union[

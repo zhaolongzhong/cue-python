@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from logging import getLogger
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -10,7 +10,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.console import Console
 
-from ..schemas.completion_response import CompletionUsage
+from ..types.completion_response import CompletionUsage
 
 logger = getLogger(__name__)
 
@@ -92,7 +92,7 @@ def analyze_usage(
     max_cached_tokens: Optional[int] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
-) -> List[Dict]:
+) -> list[dict]:
     """
     Filter and analyze usage data from JSONL file based on various criteria.
     """
@@ -129,7 +129,7 @@ def analyze_usage(
     return filtered_entries
 
 
-def get_usage_statistics(model: str, entries: List[Dict]) -> Dict:
+def get_usage_statistics(model: str, entries: list[dict]) -> dict:
     """
     Calculate statistics for the filtered usage entries.
 
@@ -197,7 +197,7 @@ def get_usage_statistics(model: str, entries: List[Dict]) -> Dict:
         return {}
 
 
-def create_stats_table(stats: Dict[str, Any], model_name: str) -> Table:
+def create_stats_table(stats: dict[str, Any], model_name: str) -> Table:
     """Create a formatted table for usage statistics."""
     table = Table(title=f"Usage Statistics for {model_name}", show_header=True, header_style="bold magenta")
 

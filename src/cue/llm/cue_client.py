@@ -4,9 +4,9 @@ import logging
 import httpx
 from pydantic import BaseModel
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils
 from ..config import get_settings
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .llm_request import LLMRequest
 from .system_prompt import SYSTEM_PROMPT
 
@@ -60,25 +60,60 @@ class CueClient(LLMRequest):
                     "accept": "application/json",
                 }
 
-                response = await client.post(
-                    f"{self.base_url}/chat/completions", json=request.model_dump(), headers=headers
-                )
-
-                if response.status_code != 200:
-                    error = ErrorResponse(
-                        message=f"API request failed with status {response.status_code}: {response.text}",
-                        code=str(response.status_code),
+                try:
+                    response = await client.post(
+                        f"{self.base_url}/chat/completions",
+                        json=request.model_dump(),
+                        headers=headers,
+                        timeout=60.0,
                     )
-                    return CompletionResponse(author=request.author, model=self.model, error=error)
 
-                response_data = response.json()
-                return CompletionResponse(**response_data)
+                    logger.debug(f"Response status: {response.status_code}")
+                    logger.debug(f"Response headers: {response.headers}")
 
-        except httpx.RequestError as e:
-            error = ErrorResponse(message=f"Request failed: {str(e)}")
+                    if response.status_code != 200:
+                        error_detail = {
+                            "status_code": response.status_code,
+                            "response_text": response.text,
+                            "request_url": str(response.url),
+                            "request_headers": dict(response.request.headers),
+                        }
+                        logger.error(f"API request failed: {error_detail}")
+
+                        error = ErrorResponse(
+                            message=f"API request failed with status {response.status_code}",
+                            code=str(response.status_code),
+                            details=error_detail,
+                        )
+                        return CompletionResponse(author=request.author, model=self.model, error=error)
+
+                    response_data = response.json()
+                    return CompletionResponse(**response_data)
+
+                except httpx.TimeoutException as e:
+                    error = ErrorResponse(
+                        message=f"Request timed out: {str(e)}",
+                        code="TIMEOUT",
+                        details={
+                            "timeout_seconds": 60.0,
+                        },
+                    )
+                except httpx.RequestError as e:
+                    error = ErrorResponse(
+                        message=f"Request failed: {str(e)}",
+                        code="REQUEST_ERROR",
+                        details={"error_type": type(e).__name__, "base_url": self.base_url, "request_details": str(e)},
+                    )
+
         except Exception as e:
-            error = ErrorResponse(message=f"Exception: {str(e)}")
+            import traceback
+
+            error = ErrorResponse(
+                message=f"Exception: {str(e)}",
+                code="INTERNAL_ERROR",
+                details={"error_type": type(e).__name__, "traceback": traceback.format_exc()},
+            )
 
         if error:
-            logger.error(error.model_dump())
+            logger.error(f"Error details: {error.model_dump()}")
         return CompletionResponse(author=request.author, model=self.model, error=error)

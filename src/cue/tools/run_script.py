@@ -5,7 +5,7 @@ import platform
 import resource
 import tempfile
 import subprocess
-from typing import Any, Dict, Union, Literal, ClassVar, Optional
+from typing import Any, Union, Literal, ClassVar, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
@@ -106,7 +106,7 @@ class PythonRunner(BaseTool):
                 if node.attr in {"system", "popen", "spawn", "fork", "exec"}:
                     raise ValueError(f"Use of '{node.attr}' is not allowed")
 
-    def _create_sandbox_env(self) -> Dict[str, Any]:
+    def _create_sandbox_env(self) -> dict[str, Any]:
         """Create a restricted environment for script execution."""
         sandbox_env = os.environ.copy()
         sandbox_env["PYTHONPATH"] = ""

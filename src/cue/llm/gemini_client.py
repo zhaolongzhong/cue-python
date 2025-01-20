@@ -6,8 +6,8 @@ import openai
 from pydantic import BaseModel
 from openai.types.chat.chat_completion import ChatCompletion
 
+from ..types import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from ..utils import DebugUtils, TokenCounter, generate_id
-from ..schemas import AgentConfig, ErrorResponse, CompletionRequest, CompletionResponse
 from .llm_request import LLMRequest
 from .system_prompt import SYSTEM_PROMPT
 
@@ -61,7 +61,8 @@ class GeminiClient(LLMRequest):
                 "message_tokens": message_tokens,
             }
             logger.debug(
-                f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} \nsystem_message: \n{json.dumps(system_message, indent=4)}"
+                f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} \n"
+                f"system_message: \n{json.dumps(system_message, indent=4)}"
                 f"\ntools_json: {json.dumps(request.tools, indent=4)}"
             )
             messages.insert(0, system_message)

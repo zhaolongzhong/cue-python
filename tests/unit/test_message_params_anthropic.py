@@ -1,22 +1,18 @@
-from anthropic.types.beta import (
-    BetaMessageParam,
-    BetaToolUseBlockParam,
-    BetaToolResultBlockParam,
-)
+from anthropic.types import MessageParam as AnthropicMessageParam
 
 # Reference: https://docs.anthropic.com/en/api/messages-examples
 
 
 def test_user():
     message_dict = {"role": "user", "content": "Hello, Claude"}
-    message_param = BetaMessageParam(**message_dict)
+    message_param = AnthropicMessageParam(**message_dict)
     assert message_param["role"] == "user"
     assert message_param["content"] == "Hello, Claude"
 
 
 def test_assistant():
     message_dict = {"role": "assistant", "content": "Hello!"}
-    message_param = BetaMessageParam(**message_dict)
+    message_param = AnthropicMessageParam(**message_dict)
     assert message_param["role"] == "assistant"
     assert message_param["content"] == "Hello!"
 
@@ -33,7 +29,7 @@ def test_assistant_response():
         "usage": {"input_tokens": 12, "output_tokens": 6},
     }
 
-    message_param = BetaMessageParam(**message_dict)
+    message_param = AnthropicMessageParam(**message_dict)
     assert message_param["role"] == "assistant"
     assert message_param["content"][0]["text"] == "Hello!"
 
@@ -44,7 +40,9 @@ def test_tool_use():
         "content": [
             {
                 "type": "text",
-                "text": "<thinking>To answer this question, I will: 1. Use the get_weather tool to get the current weather in San Francisco. 2. Use the get_time tool to get the current time in the America/Los_Angeles timezone, which covers San Francisco, CA.</thinking>",
+                "text": """<thinking>To answer this question, I will: 1. Use the get_weather tool to get the
+                current weather in San Francisco. 2. Use the get_time tool to get the current time in the
+                America/Los_Angeles timezone, which covers San Francisco, CA.</thinking>""",
             },
             {
                 "type": "tool_use",
@@ -54,7 +52,7 @@ def test_tool_use():
             },
         ],
     }
-    param = BetaToolUseBlockParam(**message_dict)
+    param = AnthropicMessageParam(**message_dict)
     assert param["role"] == "assistant"
     assert param["content"][0]["type"] == "text"
     assert param["content"][1]["type"] == "tool_use"
@@ -72,7 +70,7 @@ def test_tool_result():
         ],
     }
 
-    param = BetaToolUseBlockParam(**message_dict)
+    param = AnthropicMessageParam(**message_dict)
     assert param["role"] == "user"
     assert param["content"][0]["type"] == "tool_result"
     assert param["content"][0]["tool_use_id"] == "toolu_01A09q90qw90lq917835lq9"
@@ -104,7 +102,7 @@ def test_tool_result_with_image():
         ],
     }
 
-    param = BetaToolResultBlockParam(**message_dict)
+    param = AnthropicMessageParam(**message_dict)
     assert param["role"] == "user"
     assert param["content"][0]["type"] == "tool_result"
     assert param["content"][0]["tool_use_id"] == "toolu_01A09q90qw90lq917835lq9"
@@ -125,7 +123,7 @@ def test_tool_result_empty():
         ],
     }
 
-    param = BetaToolResultBlockParam(**message_dict)
+    param = AnthropicMessageParam(**message_dict)
     assert param["role"] == "user"
     assert param["content"][0]["type"] == "tool_result"
     assert param["content"][0]["tool_use_id"] == "toolu_01A09q90qw90lq917835lq9"

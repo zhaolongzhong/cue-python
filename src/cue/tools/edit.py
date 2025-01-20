@@ -128,7 +128,8 @@ class EditTool(BaseTool):
         elif command == "undo_edit":
             return self.undo_edit(_path)
         raise ToolError(
-            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: {', '.join(get_args(Command))}"
+            f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
+            f"{', '.join(get_args(Command))}"
         )
 
     def validate_path(self, command: str, path: Path):
@@ -161,7 +162,10 @@ class EditTool(BaseTool):
 
             _, stdout, stderr = await run(rf"find {path} -maxdepth 2 -not -path '*/\.*'")
             if not stderr:
-                stdout = f"Here's the files and directories up to 2 levels deep in {path}, excluding hidden items:\n{stdout}\n"
+                stdout = (
+                    f"Here's the files and directories up to 2 levels deep in {path}, "
+                    f"excluding hidden items:\n{stdout}\n"
+                )
             return CLIResult(output=stdout, error=stderr)
 
         file_content = self.read_file(path)
@@ -174,15 +178,18 @@ class EditTool(BaseTool):
             init_line, final_line = view_range
             if init_line < 1 or init_line > n_lines_file:
                 raise ToolError(
-                    f"Invalid `view_range`: {view_range}. It's first element `{init_line}` should be within the range of lines of the file: {[1, n_lines_file]}"
+                    f"Invalid `view_range`: {view_range}. It's first element `{init_line}` "
+                    f"should be within the range of lines of the file: {[1, n_lines_file]}"
                 )
             if final_line > n_lines_file:
                 raise ToolError(
-                    f"Invalid `view_range`: {view_range}. It's second element `{final_line}` should be smaller than the number of lines in the file: `{n_lines_file}`"
+                    f"Invalid `view_range`: {view_range}. It's second element `{final_line}` "
+                    f"should be smaller than the number of lines in the file: `{n_lines_file}`"
                 )
             if final_line != -1 and final_line < init_line:
                 raise ToolError(
-                    f"Invalid `view_range`: {view_range}. It's second element `{final_line}` should be larger or equal than its first `{init_line}`"
+                    f"Invalid `view_range`: {view_range}. It's second element `{final_line}` "
+                    f"should be larger or equal than its first `{init_line}`"
                 )
 
             if final_line == -1:
@@ -207,7 +214,8 @@ class EditTool(BaseTool):
             file_content_lines = file_content.split("\n")
             lines = [idx + 1 for idx, line in enumerate(file_content_lines) if old_str in line]
             raise ToolError(
-                f"No replacement was performed. Multiple occurrences of old_str `{old_str}` in lines {lines}. Please ensure it is unique"
+                f"No replacement was performed. Multiple occurrences of old_str `{old_str}` in lines {lines}. "
+                "Please ensure it is unique"
             )
 
         # Replace old_str with new_str
@@ -241,7 +249,8 @@ class EditTool(BaseTool):
 
         if insert_line < 0 or insert_line > n_lines_file:
             raise ToolError(
-                f"Invalid `insert_line` parameter: {insert_line}. It should be within the range of lines of the file: {[0, n_lines_file]}"
+                f"Invalid `insert_line` parameter: {insert_line}. "
+                f"It should be within the range of lines of the file: {[0, n_lines_file]}"
             )
 
         new_str_lines = new_str.split("\n")
@@ -264,7 +273,11 @@ class EditTool(BaseTool):
             "a snippet of the edited file",
             max(1, insert_line - SNIPPET_LINES + 1),
         )
-        success_msg += "Review the changes and make sure they are as expected (correct indentation, no duplicate lines, etc). Edit the file again if necessary."
+        success_msg += (
+            "Review the changes and make sure they are as expected "
+            "(correct indentation, no duplicate lines, etc). "
+            "Edit the file again if necessary."
+        )
         return CLIResult(output=success_msg)
 
     def undo_edit(self, path: Path):

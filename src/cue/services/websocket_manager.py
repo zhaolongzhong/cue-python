@@ -2,9 +2,10 @@ import json
 import asyncio
 import logging
 from enum import Enum
-from typing import Any, Dict, Callable, Optional, Awaitable
+from typing import Any, Optional
 from datetime import datetime
 from dataclasses import dataclass
+from collections.abc import Callable, Awaitable
 
 from tenacity import (
     retry,
@@ -14,8 +15,8 @@ from tenacity import (
     retry_if_exception_type,
 )
 
+from ..types import EventMessage
 from .transport import WebSocketTransport
-from ..schemas.event_message import EventMessage
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class WebSocketManager:
     def __init__(
         self,
         ws_transport: WebSocketTransport,
-        message_handlers: Dict[str, Callable[[Dict[str, Any]], Awaitable[None]]] = None,
+        message_handlers: dict[str, Callable[[dict[str, Any]], Awaitable[None]]] = None,
         auto_reconnect: bool = True,
         max_reconnect_attempts: int = 5,
         reconnect_interval: float = 1.0,
@@ -184,7 +185,7 @@ class WebSocketManager:
                             await self._message_handlers[message_type](event)
                         except Exception as e:
                             logger.error(
-                                f"Error in message handler for type {message_type}: {e}, message: {json.dumps(message, indent=4)}"
+                                f"Error in message handler for type {message_type}: {e}, message: {json.dumps(message)}"
                             )
                     else:
                         logger.warning(f"No handler for message type: {message_type}")

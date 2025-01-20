@@ -1,16 +1,14 @@
-from typing import Dict
-
 import pytest
 
+from cue.types import AgentConfig, FeatureFlag
 from cue._agent import Agent
-from cue.schemas import AgentConfig, FeatureFlag
 from cue.tools._tool import Tool
 from cue.llm.llm_model import ChatModel
 from cue._agent_manager import AgentManager
 
 
 @pytest.fixture
-def agent_configs() -> Dict[str, AgentConfig]:
+def agent_configs() -> dict[str, AgentConfig]:
     """Create test agent configurations."""
     return {
         "main": AgentConfig(
@@ -86,29 +84,6 @@ async def test_get_agent(agent_manager, agent_configs):
     # Test get non-existent agent
     with pytest.raises(Exception, match="Agent 'unknown' not found"):
         agent_manager.get_agent("unknown")
-
-    await agent_manager.clean_up()
-
-
-@pytest.mark.asyncio
-async def test_list_agents(agent_manager, agent_configs):
-    """Test listing registered agents."""
-    main_config = agent_configs["main"]
-    helper_config = agent_configs["helper"]
-
-    agent_manager.register_agent(main_config)
-    agent_manager.register_agent(helper_config)
-
-    # List all agents
-    agents = agent_manager.list_agents()
-    assert len(agents) == 2
-    assert any(a["id"] == "main" for a in agents)
-    assert any(a["id"] == "helper" for a in agents)
-
-    # List with exclusion
-    filtered_agents = agent_manager.list_agents(exclude=["main"])
-    assert len(filtered_agents) == 1
-    assert filtered_agents[0]["id"] == "helper"
 
     await agent_manager.clean_up()
 

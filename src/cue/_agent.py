@@ -1,8 +1,6 @@
-"""Base agent implementation."""
-
 import os
 import logging
-from typing import Dict, List, Union, Optional
+from typing import Union, Optional
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -10,24 +8,24 @@ from pydantic import BaseModel
 from .llm import LLMClient
 from .agent import AgentState
 from .tools import Tool, MemoryTool, ToolManager
-from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
-from .context import TaskContextManager, SystemContextManager, DynamicContextManager, ProjectContextManager
-from .schemas import (
+from .types import (
     Author,
     AgentConfig,
     RunMetadata,
     MessageParam,
     CompletionRequest,
     CompletionResponse,
-    ConversationContext,
     ToolResponseWrapper,
     ToolCallToolUseBlock,
 )
+from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
+from .context import TaskContextManager, ContextWindowManager, SystemContextManager, ProjectContextManager
+from .schemas import ConversationContext
 from .services import ServiceManager
-from .context.message import MessageManager
 from ._agent_summarizer import ContentSummarizer
 from .memory.memory_manager import DynamicMemoryManager
 from .system_message_builder import SystemMessageBuilder
+from .services.message_storage_service import MessageStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +49,7 @@ class Agent:
         self.project_context_manager = ProjectContextManager(path=self.config.project_context_path)
         self.task_context_manager = TaskContextManager()
         self.memory_manager = DynamicMemoryManager(max_tokens=1000)
-        self.context = DynamicContextManager(
+        self.context = ContextWindowManager(
             model=self.config.model,
             max_tokens=config.max_context_tokens,
             feature_flag=self.config.feature_flag,
@@ -67,7 +65,7 @@ class Agent:
         self.setup_feedback()
         self.token_counter = TokenCounter()
         self.service_manager: Optional[ServiceManager] = None
-        self.message_manager: MessageManager = MessageManager()
+        self.message_storage_service: Optional[MessageStorageService] = None
 
         # Move references from state to class properties for now
         self.conversation_context: Optional[ConversationContext] = None
@@ -77,11 +75,11 @@ class Agent:
     def set_service_manager(self, service_manager: ServiceManager):
         self.service_manager = service_manager
         self.system_context_manager.set_service_manager(service_manager)
-        self.message_manager.set_service_manager(service_manager)
         self.project_context_manager.set_service_manager(service_manager)
         self.task_context_manager.set_service_manager(service_manager)
+        self.message_storage_service = service_manager.message_storage_service
 
-    def update_other_agents_info(self, other_agents: Dict[str, Dict[str, str]]) -> None:
+    def update_other_agents_info(self, other_agents: dict[str, dict[str, str]]) -> None:
         """Update information about other available agents.
         Args:
             other_agents: Dictionary mapping agent IDs to their info dictionaries.
@@ -139,8 +137,8 @@ class Agent:
         self.system_message_param = self._get_system_message()
         try:
             await self.update_context()
-            if self.config.feature_flag.enable_storage:
-                messages = await self.message_manager.get_messages_asc(limit=10)
+            if self.config.feature_flag.enable_storage and self.message_storage_service:
+                messages = await self.message_storage_service.get_messages_asc(limit=10)
                 if messages:
                     logger.debug(f"initial messages: {len(messages)}")
                     self.context.clear_messages()
@@ -172,7 +170,7 @@ class Agent:
         if messages:
             return messages[0]
 
-    async def add_messages(self, messages: List[Union[CompletionResponse, ToolResponseWrapper, MessageParam]]) -> list:
+    async def add_messages(self, messages: list[Union[CompletionResponse, ToolResponseWrapper, MessageParam]]) -> list:
         try:
             if self.config.feature_flag.enable_storage:
                 messages_with_id = []
@@ -202,10 +200,10 @@ class Agent:
     async def persist_message(
         self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]
     ) -> Union[CompletionResponse, ToolResponseWrapper, MessageParam]:
-        if not self.config.feature_flag.enable_storage:
+        if not self.config.feature_flag.enable_storage or not self.message_storage_service:
             return message
         try:
-            message_with_id = await self.message_manager.persist_message(message)
+            message_with_id = await self.message_storage_service.persist_message(message)
             return message_with_id
         except Exception as e:
             self.state.record_error(e)
@@ -282,7 +280,7 @@ class Agent:
 
     async def send_messages(
         self,
-        messages: List[Union[BaseModel, Dict]],
+        messages: list[Union[BaseModel, dict]],
         run_metadata: Optional[RunMetadata] = None,
         author: Optional[Author] = None,
     ) -> Union[CompletionResponse, ToolCallToolUseBlock]:
@@ -354,7 +352,7 @@ class Agent:
             self.client = LLMClient(self.config)
             self.update_tools()
 
-            self.context = DynamicContextManager(
+            self.context = ContextWindowManager(
                 model=self.config.model,
                 max_tokens=self.config.max_context_tokens,
                 feature_flag=self.config.feature_flag,

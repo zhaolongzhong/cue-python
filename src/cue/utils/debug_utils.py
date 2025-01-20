@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Union, Optional
 from pathlib import Path
 from datetime import datetime
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class DebugUtils:
     @staticmethod
-    def debug_print_messages(messages: List[Dict[str, Any]], indent: int = 2, tag: Optional[str] = None) -> None:
+    def debug_print_messages(messages: list[dict[str, Any]], indent: int = 2, tag: Optional[str] = None) -> None:
         """
         Pretty prints a list of message dictionaries.
 
@@ -40,7 +40,7 @@ class DebugUtils:
                 logger.debug("debug_print skip print last message, it might be image")
 
     @staticmethod
-    def _serialize_message(msg: Union[Dict, BaseModel]) -> Dict[str, Any]:
+    def _serialize_message(msg: Union[dict, BaseModel]) -> dict[str, Any]:
         """
         Convert message to a serializable dictionary
         """
@@ -50,7 +50,7 @@ class DebugUtils:
 
     @staticmethod
     def take_snapshot(
-        messages: List[Union[Dict, BaseModel]],
+        messages: list[Union[dict, BaseModel]],
         pretty: bool = True,
         subfolder: Optional[str] = None,
         suffix: Optional[str] = None,

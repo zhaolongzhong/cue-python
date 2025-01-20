@@ -1,18 +1,19 @@
 import asyncio
 import logging
-from typing import Any, Union, Callable, Optional
+from typing import Any, Union, Optional
+from collections.abc import Callable
 
-from .utils import DebugUtils
-from ._agent import Agent
-from .schemas import (
+from .types import (
     Author,
-    ErrorType,
     RunMetadata,
     MessageParam,
     AgentTransfer,
     CompletionResponse,
     ToolResponseWrapper,
 )
+from .utils import DebugUtils
+from ._agent import Agent
+from .schemas import ErrorType
 from .tools._tool import ToolManager
 from .services.monitoring_client import MonitoringClient
 
@@ -184,7 +185,8 @@ class AgentLoop:
         logger.debug(f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn - 1}")
         if run_metadata.enable_turn_debug and prompt_callback:
             user_response = await prompt_callback(
-                f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn - 1}. Debug. Continue? (y/n, press Enter to continue): "
+                f"Maximum turn {run_metadata.max_turns}, current: {run_metadata.current_turn - 1}. "
+                "Debug. Continue? (y/n, press Enter to continue): "
             )
             if user_response.lower() not in ["y", "yes", ""]:
                 logger.warning("Stopped by user.")

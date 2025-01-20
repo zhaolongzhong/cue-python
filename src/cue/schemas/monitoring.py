@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, Literal, Optional
+from typing import Literal, Optional
 from datetime import datetime
 
 from pydantic import Field, BaseModel, field_serializer
@@ -22,7 +22,7 @@ class ErrorReport(BaseModel):
     assistant_id: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.now)
 
-    metadata: Optional[Dict] = Field(
+    metadata: Optional[dict] = Field(
         default=None, description="Additional context: tool_name, error_trace, state, etc."
     )
 
