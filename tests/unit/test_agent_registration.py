@@ -1,10 +1,13 @@
+from unittest.mock import Mock, AsyncMock
+
 import pytest
 
 from cue.types import AgentConfig, FeatureFlag
 from cue._agent import Agent
-from cue.tools._tool import Tool
+from cue.tools._tool import Tool, ToolManager
 from cue.llm.llm_model import ChatModel
 from cue._agent_manager import AgentManager
+from cue.services.service_manager import ServiceManager
 
 
 @pytest.fixture
@@ -30,6 +33,27 @@ def agent_configs() -> dict[str, AgentConfig]:
             tools=[Tool.Edit],
         ),
     }
+
+
+@pytest.fixture
+def mock_tool_manager() -> Mock:
+    """Create a mock tool manager."""
+    manager = Mock(spec=ToolManager)
+    manager.initialize = AsyncMock()
+    manager.clean_up = AsyncMock()
+    manager.get_tool_definitions = Mock(return_value=[{"name": "edit", "description": "Edit tool for testing"}])
+    return manager
+
+
+@pytest.fixture
+def mock_service_manager():
+    service_manager = AsyncMock(spec=ServiceManager)
+    assistants = AsyncMock()
+    assistants.get_system_context = AsyncMock(return_value="Test system context")
+    service_manager.assistants = assistants
+    service_manager.messages = AsyncMock()
+    service_manager.message_storage_service = Mock()
+    return service_manager
 
 
 @pytest.fixture
@@ -69,7 +93,7 @@ async def test_register_duplicate_agent(agent_manager, agent_configs):
 
 
 @pytest.mark.asyncio
-async def test_primary_agent_selection(agent_manager, agent_configs):
+async def test_primary_agent_selection(agent_manager, agent_configs, mock_tool_manager, mock_service_manager):
     """Test primary agent selection and other agents info update."""
     main_config = agent_configs["main"]
     helper_config = agent_configs["helper"]
@@ -77,6 +101,8 @@ async def test_primary_agent_selection(agent_manager, agent_configs):
     # Register agents
     main_agent = agent_manager.register_agent(main_config)
     helper_agent = agent_manager.register_agent(helper_config)
+    await main_agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
+    await helper_agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
 
     # Test primary agent is set
     assert agent_manager.primary_agent == main_agent

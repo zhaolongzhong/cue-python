@@ -1,11 +1,12 @@
-from unittest.mock import AsyncMock
+from unittest.mock import Mock, AsyncMock
 
 import pytest
 
-from cue.tools._tool import Tool
+from cue.tools._tool import Tool, ToolManager
 from cue.agent.agent_state import AgentState
 from cue.types.agent_config import AgentConfig
 from cue.context.context_manager import ContextManager
+from cue.services.service_manager import ServiceManager
 
 
 @pytest.fixture
@@ -22,10 +23,25 @@ def basic_config():
 
 
 @pytest.fixture
-def context_manager(basic_config):
+def tool_manager() -> ToolManager:
+    """Create a mock tool manager for testing."""
+    return Mock(spec=ToolManager)
+
+
+@pytest.fixture
+def service_manager() -> ServiceManager:
+    """Create a mock service manager for testing."""
+    service_manager = Mock(spec=ServiceManager)
+    service_manager.message_storage_service = Mock()
+    service_manager.messages = Mock()
+    return service_manager
+
+
+@pytest.fixture
+def context_manager(basic_config, tool_manager, service_manager):
     """Create a ContextManager instance with basic config"""
     state = AgentState()
-    return ContextManager(config=basic_config, state=state)
+    return ContextManager(config=basic_config, state=state, tool_manager=tool_manager, service_manager=service_manager)
 
 
 def test_context_manager_initialization(context_manager):
@@ -57,7 +73,7 @@ def test_generate_description_no_tools():
         project_context_path="/tmp",
     )
     state = AgentState()
-    manager = ContextManager(config=config, state=state)
+    manager = ContextManager(config=config, state=state, tool_manager=None, service_manager=None)
     description = manager.generate_description()
     assert description is None
 

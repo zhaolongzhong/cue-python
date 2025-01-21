@@ -9,16 +9,13 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectContextManager:
-    def __init__(self, path: Optional[str]):
+    def __init__(self, path: Optional[str], service_manager: Optional[ServiceManager] = None):
         self.path = path
         self.pre_context: Optional[str] = None
         self._project_context: Optional[str] = None
         self.token_counter = TokenCounter()
         self.message_params: Optional[dict] = None
-        self.service_manager: Optional[ServiceManager] = None
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
+        self.service_manager: Optional[ServiceManager] = service_manager
 
     async def update_context(self) -> None:
         """Load project context."""

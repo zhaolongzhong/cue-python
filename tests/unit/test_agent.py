@@ -37,9 +37,31 @@ def mock_tool_manager() -> Mock:
 
 
 @pytest.fixture
+def mock_service_manager():
+    service_manager = AsyncMock(spec=ServiceManager)
+    assistants = AsyncMock()
+    assistants.get_system_context = AsyncMock(return_value="Test system context")
+    service_manager.assistants = assistants
+    service_manager.messages = AsyncMock()
+    service_manager.message_storage_service = Mock(spec=MessageStorageService)
+    return service_manager
+
+
+@pytest.fixture
 def agent(agent_config: AgentConfig) -> Agent:
     """Create a test agent."""
     return Agent(agent_config)
+
+
+@pytest.fixture
+def initialize_agent(agent: Agent, mock_tool_manager, mock_service_manager):
+    """Return an async function that initializes the agent."""
+
+    async def _initialize():
+        await agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
+        return agent
+
+    return _initialize
 
 
 @pytest.mark.asyncio
@@ -72,8 +94,27 @@ async def test_agent_initialization_with_tools(agent: Agent, mock_tool_manager: 
 
 
 @pytest.mark.asyncio
-async def test_add_message(agent: Agent) -> None:
+async def test_service_manager_integration(agent: Agent, mock_tool_manager: Mock) -> None:
+    """Test service manager integration."""
+    service_manager = Mock(spec=ServiceManager)
+    service_manager.message_storage_service = Mock(spec=MessageStorageService)
+    service_manager.messages = Mock()
+    config = AgentConfig(model=ChatModel.GPT_4O_MINI.id)
+    service_manager.get_latest_agent_config = AsyncMock(return_value=config)
+
+    await agent._initialize(tool_manager=mock_tool_manager, service_manager=service_manager)
+    assert agent.state.has_initialized
+    assert agent.service_manager == service_manager
+
+    # Test model overwrite handling
+    await agent.handle_overwrite_config()
+    assert agent.config.model == ChatModel.GPT_4O_MINI.id
+
+
+@pytest.mark.asyncio
+async def test_add_message(initialize_agent) -> None:
     """Test adding a single message."""
+    agent = await initialize_agent()
     message = MessageParam(role="user", content="Test message")
     updated_message = await agent.add_message(message)
 
@@ -84,8 +125,9 @@ async def test_add_message(agent: Agent) -> None:
 
 
 @pytest.mark.asyncio
-async def test_add_messages(agent: Agent) -> None:
+async def test_add_messages(initialize_agent) -> None:
     """Test adding multiple messages."""
+    agent = await initialize_agent()
     messages = [
         MessageParam(role="user", content="Message 1"),
         MessageParam(role="assistant", content="Message 2"),
@@ -100,8 +142,9 @@ async def test_add_messages(agent: Agent) -> None:
 
 
 @pytest.mark.asyncio
-async def test_build_message_params(agent: Agent) -> None:
+async def test_build_message_params(initialize_agent) -> None:
     """Test building message parameters."""
+    agent = await initialize_agent()
     # Add some test messages
     messages = [
         MessageParam(role="user", content="Test input"),
@@ -120,8 +163,9 @@ async def test_build_message_params(agent: Agent) -> None:
 
 
 @pytest.mark.asyncio
-async def test_build_context_for_next_agent(agent: Agent) -> None:
+async def test_build_context_for_next_agent(initialize_agent) -> None:
     """Test building context for next agent."""
+    agent = await initialize_agent()
     # Add some test messages
     messages = [
         MessageParam(role="user", content="Message 1"),
@@ -143,23 +187,6 @@ async def test_build_context_for_next_agent(agent: Agent) -> None:
     assert "Message 1" in context_all
     assert "Message 2" in context_all
     assert "Transfer" not in context_all
-
-
-@pytest.mark.asyncio
-async def test_service_manager_integration(agent: Agent) -> None:
-    """Test service manager integration."""
-    service_manager = Mock(spec=ServiceManager)
-    service_manager.message_storage_service = Mock(spec=MessageStorageService)
-    service_manager.messages = Mock()
-    config = AgentConfig(model=ChatModel.GPT_4O_MINI.id)
-    service_manager.get_latest_agent_config = AsyncMock(return_value=config)
-
-    agent.set_service_manager(service_manager)
-    assert agent.service_manager == service_manager
-
-    # Test model overwrite handling
-    await agent.handle_overwrite_config()
-    assert agent.config.model == ChatModel.GPT_4O_MINI.id
 
 
 @pytest.mark.asyncio
@@ -188,7 +215,7 @@ async def test_run_message_flow(agent: Agent, mock_tool_manager: Mock) -> None:
 
     # Run with metadata
     run_metadata = RunMetadata()
-    response = await agent.run(mock_tool_manager, run_metadata)
+    response = await agent.run(run_metadata=run_metadata, tool_manager=mock_tool_manager)
 
     assert response == mock_response
     assert agent.state.get_token_stats()["actual_usage"] != {}

@@ -106,8 +106,9 @@ async def test_agent_loop_basic_flow(agent: Agent, tool_manager: ToolManager, ru
     assert response == mock_response
     assert run_metadata.current_turn == 1
     agent.run.assert_awaited_once_with(
-        tool_manager=tool_manager,
         run_metadata=run_metadata,
+        tool_manager=tool_manager,
+        service_manager=None,
         author=Author(role="user"),
     )
     agent.add_message.assert_awaited_once()
@@ -218,8 +219,9 @@ async def test_agent_loop_with_agent_transfer(agent: Agent, tool_manager: ToolMa
     assert result.message == "Transferring to primary"
     assert result.run_metadata == run_metadata
     agent.run.assert_awaited_once_with(
-        tool_manager=tool_manager,
         run_metadata=run_metadata,
+        tool_manager=tool_manager,
+        service_manager=None,
         author=Author(role="user"),
     )
 
@@ -416,14 +418,19 @@ async def test_agent_loop_error_handling(agent: Agent, tool_manager: ToolManager
 
     # Execute
     response = await agent_loop.run(
-        agent=agent, tool_manager=tool_manager, run_metadata=run_metadata, callback=callback
+        agent=agent,
+        run_metadata=run_metadata,
+        tool_manager=tool_manager,
+        service_manager=None,
+        callback=callback,
     )
 
     # Verify
     assert response is None  # Should exit due to error
     agent.run.assert_awaited_once_with(
-        tool_manager=tool_manager,
         run_metadata=run_metadata,
+        tool_manager=tool_manager,
+        service_manager=None,
         author=Author(role="user"),
     )
     callback.assert_not_called()  # Callback should not be called on error

@@ -40,14 +40,13 @@ def token_stats():
 
 
 @pytest.fixture
-def system_context_manager(metrics, token_stats, mock_token_counter):
-    return SystemContextManager(metrics, token_stats)
+def system_context_manager(metrics, token_stats, mock_token_counter, mock_service_manager):
+    return SystemContextManager(metrics, token_stats, service_manager=mock_service_manager)
 
 
 @pytest.mark.asyncio
 async def test_update_base_context(system_context_manager, mock_service_manager):
     """Test updating base context from service"""
-    system_context_manager.set_service_manager(mock_service_manager)
     await system_context_manager.update_base_context()
 
     assert "Test system context" in system_context_manager.system_context_base

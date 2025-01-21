@@ -37,12 +37,8 @@ class Agent:
         self.client: LLMClient = LLMClient(self.config)
         self.metadata: Optional[RunMetadata] = None
         self.state = AgentState()
-        self.context_manager = ContextManager(config=config, state=self.state)
+        self.context_manager: Optional[ContextManager] = None
         self.token_counter = TokenCounter()
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
-        self.context_manager.set_service_manager(service_manager)
 
     def update_other_agents_info(self, other_agents: dict[str, dict[str, str]]) -> None:
         self.context_manager.update_other_agents_info(other_agents)
@@ -50,15 +46,24 @@ class Agent:
     def _get_system_message(self) -> MessageParam:
         return self.context_manager.get_system_message()
 
-    async def _initialize(self, tool_manager: ToolManager):
+    async def _initialize(self, tool_manager: ToolManager, service_manager: Optional[ServiceManager] = None):
         if self.state.has_initialized:
             return
 
         logger.debug(f"initialize ... \n{self.config.model_dump_json(indent=4)}")
+
         if not self.tool_manager:
             self.tool_manager = tool_manager
             await tool_manager.initialize()
             self._update_tools()
+
+        self.service_manager = service_manager
+        self.context_manager = ContextManager(
+            config=self.config,
+            state=self.state,
+            tool_manager=self.tool_manager,
+            service_manager=service_manager,
+        )
         try:
             await self.update_context()
             if self.config.feature_flag.enable_storage and self.message_storage_service:
@@ -85,7 +90,6 @@ class Agent:
             self.state.update_token_stats("tool", str(self.tools))
 
     async def update_context(self) -> None:
-        self.context_manager.update_tool_manager(self.tool_manager)
         await self.context_manager.update_context()
 
     def build_system_context(self) -> str:
@@ -166,13 +170,14 @@ class Agent:
 
     async def run(
         self,
-        tool_manager: ToolManager,
         run_metadata: RunMetadata,
+        tool_manager: ToolManager,
+        service_manager: Optional[ServiceManager] = None,
         author: Optional[Author] = None,
     ) -> Union[CompletionResponse, ToolCallToolUseBlock]:
         try:
             self.metadata = run_metadata
-            await self._initialize(tool_manager)
+            await self._initialize(tool_manager=tool_manager, service_manager=service_manager)
             message_params = await self.build_message_params()
             messages_str = str(message_params)
             self.state.update_token_stats("messages", messages_str)

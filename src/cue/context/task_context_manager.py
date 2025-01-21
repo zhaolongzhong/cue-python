@@ -6,13 +6,12 @@ from cue.services.service_manager import ServiceManager
 
 from ..schemas import Message
 from ..utils.token_counter import TokenCounter
-from ..services.message_client import MessageClient
 
 logger = logging.getLogger(__name__)
 
 
 class TaskContextManager:
-    def __init__(self, max_tokens: int = 2000, max_chars: int = 1000, message_client: Optional[MessageClient] = None):
+    def __init__(self, max_tokens: int = 2000, max_chars: int = 1000, service_manager: Optional[ServiceManager] = None):
         """
         Initialize the TaskContextManager with a maximum token limit.
 
@@ -33,11 +32,7 @@ class TaskContextManager:
             "current_goal": None,
             "conversation_id": None,  # Set when loading from remote
         }
-        self.message_client = message_client
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
-        self.message_client = self.service_manager.messages
+        self.message_client = service_manager.messages if service_manager else None
 
     async def load_from_remote(self, conversation_id: Optional[str] = None) -> None:
         """

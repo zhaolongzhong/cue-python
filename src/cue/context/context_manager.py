@@ -24,22 +24,29 @@ class ContextManager:
         self,
         config: AgentConfig,
         state: AgentState,
+        tool_manager: Optional[ToolManager] = None,
+        service_manager: Optional[ServiceManager] = None,
     ):
         self.summarizer: ContentSummarizer = create_summarizer(config)
-        self.tool_manager: ToolManager = None
+        self.tool_manager: ToolManager = tool_manager
+        self.service_manager = service_manager
         self.config = config
         self.state = state
         self.description: Optional[str] = None
         self.initialize()
 
     def initialize(self):
-        self.other_agents = {}
         self.system_context_manager = SystemContextManager(
-            metrics=self.state.get_metrics(), token_stats=self.state.get_token_stats()
+            metrics=self.state.get_metrics(),
+            token_stats=self.state.get_token_stats(),
+            service_manager=self.service_manager,
         )
         self.memory_manager = DynamicMemoryManager(max_tokens=1000)
-        self.project_context_manager = ProjectContextManager(path=self.config.project_context_path)
-        self.task_context_manager = TaskContextManager()
+        self.project_context_manager = ProjectContextManager(
+            path=self.config.project_context_path,
+            service_manager=self.service_manager,
+        )
+        self.task_context_manager = TaskContextManager(service_manager=self.service_manager)
         self.context_window_manager = ContextWindowManager(
             model=self.config.model,
             max_tokens=self.config.max_context_tokens,
@@ -48,13 +55,9 @@ class ContextManager:
         )
         self.system_context: Optional[str] = None
         self.system_message_builder = SystemMessageBuilder(self.config)
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
-        self.system_context_manager.set_service_manager(service_manager)
-        self.project_context_manager.set_service_manager(service_manager)
-        self.task_context_manager.set_service_manager(service_manager)
-        self.message_storage_service = service_manager.message_storage_service
+        if self.service_manager:
+            self.message_storage_service = self.service_manager.message_storage_service
+        self.other_agents = {}
 
     def reset(self, state: AgentState):
         self.state = state
@@ -67,10 +70,6 @@ class ContextManager:
     def update_state(self, state: AgentState):
         """Update the agent state."""
         self.state = state
-
-    def update_tool_manager(self, tool_manager: ToolManager):
-        """Update the tool manager."""
-        self.tool_manager = tool_manager
 
     def get_system_message(self) -> MessageParam:
         return self.system_message_builder.build()

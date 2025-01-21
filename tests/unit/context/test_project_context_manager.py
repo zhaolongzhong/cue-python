@@ -26,14 +26,13 @@ def mock_token_counter():
 
 
 @pytest.fixture
-def project_context_manager(mock_token_counter):
-    return ProjectContextManager(path="/test/path/context.txt")
+def project_context_manager(mock_token_counter, mock_service_manager):
+    return ProjectContextManager(path="/test/path/context.txt", service_manager=mock_service_manager)
 
 
 @pytest.mark.asyncio
 async def test_update_context_from_service(project_context_manager, mock_service_manager):
     """Test updating context from service manager"""
-    project_context_manager.set_service_manager(mock_service_manager)
     await project_context_manager.update_context()
 
     assert project_context_manager.get_project_context() == "Test project context"
@@ -44,6 +43,7 @@ async def test_update_context_from_service(project_context_manager, mock_service
 @pytest.mark.asyncio
 async def test_update_context_from_file(project_context_manager, tmp_path):
     """Test updating context from file"""
+    project_context_manager.service_manager = None
     test_content = "Test file content"
     test_file = tmp_path / "context.txt"
     test_file.write_text(test_content)
@@ -69,6 +69,7 @@ async def test_update_context_no_path(mock_token_counter):
 async def test_update_context_nonexistent_file(project_context_manager):
     """Test updating context with nonexistent file"""
     project_context_manager.path = "/nonexistent/path/context.txt"
+    project_context_manager.service_manager = None
     await project_context_manager.update_context()
 
     assert project_context_manager.get_project_context() is None
@@ -78,6 +79,7 @@ async def test_update_context_nonexistent_file(project_context_manager):
 @pytest.mark.asyncio
 async def test_context_overwrite_empty(project_context_manager, tmp_path):
     """Test handling of context being overwritten with empty content"""
+    project_context_manager.service_manager = None
     # First write content
     test_file = tmp_path / "context.txt"
     test_file.write_text("Initial content")

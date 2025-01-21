@@ -10,16 +10,13 @@ logger = logging.getLogger(__name__)
 
 
 class SystemContextManager:
-    def __init__(self, metrics: dict, token_stats: dict):
+    def __init__(self, metrics: dict, token_stats: dict, service_manager: Optional[ServiceManager] = None):
         self.metrics = metrics
         self.token_stats = token_stats
         self.token_counter = TokenCounter()
         self.system_context_base: Optional[str] = None
         self.system_context = ""
-        self.service_manager: Optional[ServiceManager] = None
-
-    def set_service_manager(self, service_manager: ServiceManager):
-        self.service_manager = service_manager
+        self.service_manager: Optional[ServiceManager] = service_manager
 
     async def update_base_context(self) -> None:
         self.system_context_base = self._get_time_context()

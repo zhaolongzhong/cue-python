@@ -124,7 +124,6 @@ class AgentManager:
             self.run_metadata = run_metadata
         self.run_metadata.current_turn = 0  # reset current turn since it's user input
         self.active_agent = self._agents[active_agent_id]
-        self.active_agent.set_service_manager(self.service_manager)
         # Start execute_run if not already running
         if not callback:
             callback = self.handle_response
@@ -175,10 +174,10 @@ class AgentManager:
                 response = await self.agent_loop.run(
                     agent=self.active_agent,
                     run_metadata=self.run_metadata,
+                    tool_manager=self.tool_manager,
+                    service_manager=self.service_manager,
                     callback=callback,
                     prompt_callback=self.prompt_callback,
-                    tool_manager=self.tool_manager,
-                    monitoring=self.service_manager.monitoring if self.service_manager else None,
                 )
                 if isinstance(response, AgentTransfer):
                     if response.run_metadata:
