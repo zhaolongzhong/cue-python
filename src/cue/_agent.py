@@ -1,13 +1,11 @@
-import os
 import logging
 from typing import Union, Optional
-from pathlib import Path
 
 from pydantic import BaseModel
 
 from .llm import LLMClient
 from .agent import AgentState
-from .tools import Tool, MemoryTool, ToolManager
+from .tools import ToolManager
 from .types import (
     Author,
     AgentConfig,
@@ -19,12 +17,8 @@ from .types import (
     ToolCallToolUseBlock,
 )
 from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
-from .context import TaskContextManager, ContextWindowManager, SystemContextManager, ProjectContextManager
-from .schemas import ConversationContext
 from .services import ServiceManager
-from ._agent_summarizer import ContentSummarizer, create_summarizer
-from .memory.memory_manager import DynamicMemoryManager
-from .system_message_builder import SystemMessageBuilder
+from .context.context_manager import ContextManager
 from .services.message_storage_service import MessageStorageService
 
 logger = logging.getLogger(__name__)
@@ -34,88 +28,27 @@ class Agent:
     def __init__(self, config: AgentConfig):
         self.id = config.id
         self.config = config
-        self.state = AgentState()
         self.tool_manager: Optional[ToolManager] = None
-        self.summarizer: ContentSummarizer = create_summarizer(config)
-        self.system_context_manager = SystemContextManager(
-            metrics=self.state.get_metrics(), token_stats=self.state.get_token_stats()
-        )
-        self.project_context_manager = ProjectContextManager(path=self.config.project_context_path)
-        self.task_context_manager = TaskContextManager()
-        self.memory_manager = DynamicMemoryManager(max_tokens=1000)
-        self.context = ContextWindowManager(
-            model=self.config.model,
-            max_tokens=config.max_context_tokens,
-            feature_flag=self.config.feature_flag,
-            summarizer=self.summarizer,
-        )
-        self.client: LLMClient = LLMClient(self.config)
-        self.metadata: Optional[RunMetadata] = None
-        self.description = self._generate_description()
-        self.other_agents = {}
-        self.other_agents_info = ""
         self.tools = None
-        self.system_message_builder = SystemMessageBuilder(self.id, self.config)
-        self.setup_feedback()
-        self.token_counter = TokenCounter()
+
         self.service_manager: Optional[ServiceManager] = None
         self.message_storage_service: Optional[MessageStorageService] = None
 
-        # Move references from state to class properties for now
-        self.conversation_context: Optional[ConversationContext] = None
-        self.system_context: Optional[str] = None
-        self.system_message_param: Optional[str] = None
+        self.client: LLMClient = LLMClient(self.config)
+        self.metadata: Optional[RunMetadata] = None
+        self.state = AgentState()
+        self.context_manager = ContextManager(config=config, state=self.state)
+        self.token_counter = TokenCounter()
 
     def set_service_manager(self, service_manager: ServiceManager):
         self.service_manager = service_manager
-        self.system_context_manager.set_service_manager(service_manager)
-        self.project_context_manager.set_service_manager(service_manager)
-        self.task_context_manager.set_service_manager(service_manager)
-        self.message_storage_service = service_manager.message_storage_service
+        self.context_manager.set_service_manager(service_manager)
 
     def update_other_agents_info(self, other_agents: dict[str, dict[str, str]]) -> None:
-        """Update information about other available agents.
-        Args:
-            other_agents: Dictionary mapping agent IDs to their info dictionaries.
-                        Each info dict should contain at least a 'name' key.
-        """
-        self.other_agents = other_agents
-        # Format the info into a readable string for system messages
-        if other_agents:
-            agents_list = [f"{agent_id} ({info['name']})" for agent_id, info in other_agents.items()]
-            self.other_agents_info = "Available agents: " + ", ".join(agents_list)
+        self.context_manager.update_other_agents_info(other_agents)
 
     def _get_system_message(self) -> MessageParam:
-        self.system_message_builder.set_conversation_context(self.conversation_context)
-        self.system_message_builder.set_other_agents_info(self.other_agents_info)
-        return self.system_message_builder.build()
-
-    async def _update_recent_memories(self) -> Optional[str]:
-        """Should be called whenever there is a memory update"""
-        if not self.config.feature_flag.enable_storage or Tool.Memory not in self.config.tools:
-            return None
-        try:
-            memory_tool: MemoryTool = self.tool_manager.tools[Tool.Memory.value]
-            memory_dict = await memory_tool.get_recent_memories(limit=5)
-            self.memory_manager.add_memories(memory_dict)
-            self.memory_manager.update_recent_memories()
-        except Exception as e:
-            self.state.record_error(e)
-            logger.error(f"Ran into error while trying to get recent memories: {e}")
-            return None
-
-    def _generate_description(self) -> str:
-        """Return the description about the agent."""
-        description = ""
-        if self.config.description:
-            description = self.config.description
-        if not self.config.tools:
-            return
-        tool_names = [tool.value for tool in self.config.tools]
-        if not tool_names:
-            return description
-        description += f" Agent {self.id} is able to use these tools: {', '.join(tool_names)}"
-        return description
+        return self.context_manager.get_system_message()
 
     async def _initialize(self, tool_manager: ToolManager):
         if self.state.has_initialized:
@@ -124,27 +57,23 @@ class Agent:
         logger.debug(f"initialize ... \n{self.config.model_dump_json(indent=4)}")
         if not self.tool_manager:
             self.tool_manager = tool_manager
-
-        await tool_manager.initialize()
-
-        self.update_tools()
-        self.system_message_param = self._get_system_message()
+            await tool_manager.initialize()
+            self._update_tools()
         try:
             await self.update_context()
             if self.config.feature_flag.enable_storage and self.message_storage_service:
                 messages = await self.message_storage_service.get_messages_asc(limit=10)
                 if messages:
                     logger.debug(f"initial messages: {len(messages)}")
-                    self.context.clear_messages()
+                    self.context_manager.context_window_manager.clear_messages()
                     await self.add_messages(messages)
         except Exception as e:
-            self.state.record_error(e)
+            self.state.record_error(e, from_tag="initialize")
             logger.error(f"Ran into error when initialize: {e}")
 
-        self.summarizer.update_context(self.system_context)
         self.state.has_initialized = True
 
-    def update_tools(self):
+    def _update_tools(self):
         if self.config.tools:
             tools = self.config.tools.copy()
 
@@ -154,6 +83,14 @@ class Agent:
                 if mcp_tools:
                     self.tools.extend(mcp_tools)
             self.state.update_token_stats("tool", str(self.tools))
+
+    async def update_context(self) -> None:
+        self.context_manager.update_tool_manager(self.tool_manager)
+        await self.context_manager.update_context()
+
+    def build_system_context(self) -> str:
+        """Build short time static system context"""
+        return self.context_manager.build_system_context()
 
     async def clean_up(self):
         if self.tool_manager:
@@ -178,18 +115,18 @@ class Agent:
                         logger.debug(f"Message is already persisted: {message.msg_id}")
                     messages_with_id.append(update_message)
                 messages = messages_with_id
-            has_truncated_history = await self.context.add_messages(messages)
+            has_truncated_history = await self.context_manager.context_window_manager.add_messages(messages)
             if has_truncated_history:
                 """Only update context when there are truncated messages to make the most of prompt caching"""
                 try:
                     logger.debug("We have truncated messages, update context")
                     await self.update_context()
                 except Exception as e:
-                    self.state.record_error(e)
+                    self.state.record_error(e, from_tag="add_messages")
                     logger.debug(f"Ran into error when update context: {e}")
-            self.state.update_context_stats(self.context.get_context_stats())
+            self.state.update_context_stats(self.context_manager.context_window_manager.get_context_stats())
         except Exception as e:
-            self.state.record_error(e)
+            self.state.record_error(e, from_tag="add_messages")
             logger.error(f"Ran into error when add messages: {e}")
         return messages
 
@@ -206,34 +143,6 @@ class Agent:
             logger.error(f"Ran into error when persist message: {e}")
         return message
 
-    def snapshot(self) -> str:
-        """Take a snapshot of current message list and save to a file"""
-        return DebugUtils.take_snapshot(self.context.messages)
-
-    def setup_feedback(self) -> str:
-        """Setup system feedback"""
-        if not self.config.feedback_path:
-            self.config.feedback_path = Path(
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "../../logs/feedbacks"))
-            )
-            self.config.feedback_path.mkdir(parents=True, exist_ok=True)
-
-    async def update_context(self) -> None:
-        logger.debug("update_context ...")
-        await self.system_context_manager.update_base_context()
-        await self._update_recent_memories()
-        await self.project_context_manager.update_context()
-        await self.task_context_manager.load_from_remote()
-
-    def build_system_context(self) -> str:
-        """Build short time static system context"""
-        return self.system_context_manager.build_system_context(
-            project_context=self.project_context_manager.get_project_context(),
-            task_context=self.task_context_manager.get_formatted_task_context(),
-            memories=self.memory_manager.recent_memories,
-            summaries=self.context.get_summaries(),
-        )
-
     async def build_message_params(self) -> list[dict]:
         """
         Build a list of message parameter dictionaries for the completion API call.
@@ -246,7 +155,7 @@ class Agent:
         4. Current message list (dynamic)
         """
         # Get message list
-        messages = self.context.get_messages()
+        messages = self.context_manager.context_window_manager.get_messages()
         logger.debug(f"{self.id} run message param size: {len(messages)}")
         message_params = [
             msg.model_dump() if hasattr(msg, "model_dump") else msg.dict() if hasattr(msg, "dict") else msg
@@ -313,37 +222,12 @@ class Agent:
         return response
 
     def build_context_for_next_agent(self, max_messages: int = 6) -> str:
-        """
-        Build context to be passed to the next agent, excluding the current transfer command and its result.
-
-        Args:
-            max_messages: Number of previous messages to include (0-12).
-                        If 0, returns empty string as no history should be included.
-
-        Returns:
-            str: Formatted message history, excluding current transfer command and result
-        """
-        if max_messages == 0:
-            return ""
-
-        history = self.context.get_messages()
-
-        # Since the last two messages are the transfer command and its result,
-        # we exclude them and then take up to max_messages from the remaining history
-        history_without_transfer = history[:-2] if len(history) >= 2 else []
-
-        # Calculate how many messages to take
-        start_idx = max(0, len(history_without_transfer) - max_messages)
-        messages = history_without_transfer[start_idx:]
-
-        messages_content = ",".join(str(msg) for msg in messages)
-
-        return messages_content
+        return self.context_manager.context_window_manager.build_context_for_next_agent(max_messages=max_messages)
 
     async def handle_overwrite_config(self):
         if not self.service_manager:
             return
-        override_config: AgentConfig = await self.service_manager.get_latest_config()
+        override_config: AgentConfig = await self.service_manager.get_latest_agent_config()
         if not override_config:
             return
         self.config = self.config.model_copy()
@@ -353,11 +237,13 @@ class Agent:
             self.config.model = override_config.model
             self.config.max_turns = override_config.max_turns
             self.client = LLMClient(self.config)
-            self.update_tools()
+            self._update_tools()
+            self.context_manager.reset(self.state)
 
-            self.context = ContextWindowManager(
-                model=self.config.model,
-                max_tokens=self.config.max_context_tokens,
-                feature_flag=self.config.feature_flag,
-                summarizer=self.summarizer,
-            )
+    async def reset_state(self):
+        self.state = AgentState()
+        await self.handle_overwrite_config()
+
+    def snapshot(self) -> str:
+        """Take a snapshot of current message list and save to a file"""
+        return DebugUtils.take_snapshot(self.context_manager.context_window_manager.messages)

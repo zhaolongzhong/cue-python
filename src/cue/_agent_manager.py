@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from typing import Any, Union, Optional
+from datetime import datetime, timezone
 from collections.abc import Callable
 
 from .types import (
@@ -17,10 +18,12 @@ from .types import (
 )
 from .utils import DebugUtils, console_utils
 from ._agent import Agent
-from .schemas import ErrorType, ConversationContext
+from .schemas import ErrorType
 from .services import ServiceManager
 from ._agent_loop import AgentLoop
 from .tools._tool import ToolManager, MCPServerManager
+from .types.agent_event import AgentControlPayload
+from ._agent_state_manager import AgentState, AgentStateManager
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,7 @@ class AgentManager:
         self.execute_run_task: Optional[asyncio.Task] = None
         self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
+        self.agent_state_manager = AgentStateManager()
 
     async def initialize(
         self, run_metadata: Optional[RunMetadata] = RunMetadata(), mcp: Optional[MCPServerManager] = None
@@ -68,6 +72,11 @@ class AgentManager:
             )
             await self.service_manager.connect()
             logger.debug("service manager connected")
+            # Set initial states for all agents
+            for agent_id in self._agents:
+                await self.agent_state_manager.set_agent_state(
+                    agent_id, AgentState.IDLE, metadata={"initialization": "complete"}
+                )
 
         # Update other agents info once we set primary agent
         self._update_other_agents_info()
@@ -105,6 +114,12 @@ class AgentManager:
         callback: Optional[Callable[[CompletionResponse], Any]] = None,
     ) -> Optional[CompletionResponse]:
         """Start a run triggered by user."""
+        # Set agent to RUNNING state before starting
+        await self.agent_state_manager.set_agent_state(
+            active_agent_id,
+            AgentState.RUNNING,
+            metadata={"message": message},
+        )
         if run_metadata:
             self.run_metadata = run_metadata
         self.run_metadata.current_turn = 0  # reset current turn since it's user input
@@ -183,6 +198,10 @@ class AgentManager:
 
     async def stop_run(self):
         """Signal the execute_run loop to stop gracefully."""
+        if self.active_agent:
+            await self.agent_state_manager.set_agent_state(
+                self.active_agent.id, AgentState.STOPPING, metadata={"stop_requested": True}
+            )
         if self.execute_run_task and not self.execute_run_task.done():
             logger.info("Stopping the ongoing run...")
             self.stop_run_event.set()
@@ -206,6 +225,11 @@ class AgentManager:
         The method clears previous memory and transfers either single or list context
         to the new active agent.
         """
+        if self.active_agent:
+            # Set previous agent to IDLE
+            await self.agent_state_manager.set_agent_state(
+                self.active_agent.id, AgentState.IDLE, metadata={"transfer_to": agent_transfer.to_agent_id}
+            )
         if agent_transfer.transfer_to_primary:
             agent_transfer.to_agent_id = self.primary_agent.id
 
@@ -248,8 +272,8 @@ class AgentManager:
             with_timestamp=True,
             subfolder="transfer",
         )
-        self.active_agent.conversation_context = ConversationContext(
-            participants=[from_agent_id, agent_transfer.to_agent_id]
+        await self.agent_state_manager.set_agent_state(
+            agent_transfer.to_agent_id, AgentState.RUNNING, metadata={"transfer_from": self.active_agent.id}
         )
 
     async def broadcast_response(self, response: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
@@ -294,10 +318,25 @@ class AgentManager:
             if isinstance(event.payload, MessagePayload):
                 message = event.payload.message
                 self.console_utils.print_msg(message)
+        elif event.type == EventMessageType.AGENT_CONTROL:
+            await self._handle_control_message(event)
         else:
             logger.debug(
                 f"Skip handle_message current_client_id {current_client_id}: {event.model_dump_json(indent=4)}"
             )
+
+    async def _handle_control_message(self, event: EventMessage) -> None:
+        """Handle agent control messages"""
+        if not isinstance(event.payload, AgentControlPayload):
+            return
+
+        agent_id = event.payload.agent_id
+        command = event.payload.control_type
+
+        if command == "stop":
+            await self.stop_run()
+        elif command == "reset":
+            await self._reset_agent(agent_id)
 
     async def handle_response(self, response: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
         self.console_utils.print_msg(f"{response.get_text()}")
@@ -331,12 +370,11 @@ class AgentManager:
             }
             agent.update_other_agents_info(other_agents)
 
-    def get_agent(self, identifier: str) -> Optional[Agent]:
-        if identifier in self._agents:
-            return self._agents[identifier]
-
-        for agent in self._agents.values():
-            if agent.config.id == identifier:
-                return agent
-
-        raise Exception(f"Agent '{identifier}' not found")
+    async def _reset_agent(self, agent_id: str) -> None:
+        """Reset agent to initial state"""
+        if agent_id in self._agents:
+            await self.stop_run()
+            self._agents[agent_id].reset_state()
+            await self.agent_state_manager.set_agent_state(
+                agent_id, AgentState.IDLE, metadata={"reset_at": datetime.now(timezone.utc).isoformat()}
+            )

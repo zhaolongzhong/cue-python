@@ -339,3 +339,31 @@ class ContextWindowManager:
         self.messages_since_removal = 0
 
         return removed
+
+    def build_context_for_next_agent(self, max_messages: int = 6) -> str:
+        """
+        Build context to be passed to the next agent, excluding the current transfer command and its result.
+
+        Args:
+            max_messages: Number of previous messages to include (0-12).
+                        If 0, returns empty string as no history should be included.
+
+        Returns:
+            str: Formatted message history, excluding current transfer command and result
+        """
+        if max_messages == 0:
+            return ""
+
+        history = self.get_messages()
+
+        # Since the last two messages are the transfer command and its result,
+        # we exclude them and then take up to max_messages from the remaining history
+        history_without_transfer = history[:-2] if len(history) >= 2 else []
+
+        # Calculate how many messages to take
+        start_idx = max(0, len(history_without_transfer) - max_messages)
+        messages = history_without_transfer[start_idx:]
+
+        messages_content = ",".join(str(msg) for msg in messages)
+
+        return messages_content

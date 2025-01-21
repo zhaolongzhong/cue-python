@@ -87,8 +87,10 @@ select = [
     "UP", # pyupgrade
 ]
 ignore = [
-    "B008", # do not perform function calls in argument defaults
-    "B904", # Allow raising exceptions without from e, for HTTPException
+    "B008",  # do not perform function calls in argument defaults
+    "B904",  # Allow raising exceptions without from e, for HTTPException
+    "UP006", # keep for agent
+    "UP035", # keep for agent
 ]
 
 [tool.ruff.lint.isort]

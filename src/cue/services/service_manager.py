@@ -161,6 +161,9 @@ class ServiceManager:
             return
         await self._ws_manager.send_message(message)
 
+    async def send_event_message(self, message: EventMessage) -> None:
+        await self.broadcast(message.model_dump_json())
+
     async def send_message_to_assistant(self, message: str) -> None:
         websocket_request_id = str(uuid.uuid4())
         msg = EventMessage(
@@ -314,7 +317,7 @@ class ServiceManager:
             )
         return assistant
 
-    async def get_latest_config(self) -> Optional[AgentConfig]:
+    async def get_latest_agent_config(self) -> Optional[AgentConfig]:
         await self._get_assistant(self.assistant_id)
         return self.overwrite_agent_config
 
