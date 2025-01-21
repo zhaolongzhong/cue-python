@@ -21,6 +21,7 @@ class AgentConfig(BaseModel):
     # System message defining agent's behavior, collaboration guidelines, and boundaries
     instruction: Optional[str] = None
     model: Optional[str] = None
+    max_turns: Optional[int] = 30
     api_key: Optional[str] = None
     use_cue: Optional[bool] = False
     openai_api_key: Optional[str] = None

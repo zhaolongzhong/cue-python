@@ -6,7 +6,6 @@ from datetime import datetime
 
 from pydantic import Field, BaseModel, field_serializer
 
-from ..schemas import ConversationContext
 from ..utils.token_counter import TokenCounter
 
 logger = logging.getLogger(__name__)
@@ -55,16 +54,15 @@ class AgentState:
         """Initialize agent state."""
         self.has_initialized: bool = False
         self.metrics = AgentMetrics()
-        self.conversation_context: Optional[ConversationContext] = None
         self.system_context: Optional[str] = None
         self.system_message_param: Optional[str] = None
         self._token_counter = TokenCounter()
 
-    def record_error(self, error: Exception) -> None:
+    def record_error(self, error: Exception, from_tag: Optional[str] = None) -> None:
         """Record an error occurrence."""
         self.metrics.errors += 1
         self.metrics.last_error = str(error)
-        logger.error(f"Agent error: {error}")
+        logger.error(f"Agent error: {error}, from: {from_tag}")
 
     def record_tool_call(self) -> None:
         """Record a tool call."""

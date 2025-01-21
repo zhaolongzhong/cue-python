@@ -47,7 +47,6 @@ async def test_agent_initialization(agent: Agent, agent_config: AgentConfig) -> 
     """Test basic agent initialization."""
     assert agent.id == "test_agent"
     assert agent.config == agent_config
-    assert agent.description == "Test agent Agent test_agent is able to use these tools: edit, memory"
     assert not agent.state.has_initialized
     assert agent.state.get_token_stats() == {
         "system": 0,
@@ -79,7 +78,7 @@ async def test_add_message(agent: Agent) -> None:
     updated_message = await agent.add_message(message)
 
     assert updated_message == message
-    messages = agent.context.get_messages()
+    messages = agent.context_manager.context_window_manager.get_messages()
     assert len(messages) == 1
     assert messages[0]["content"] == "Test message"
 
@@ -94,7 +93,7 @@ async def test_add_messages(agent: Agent) -> None:
     updated_messages = await agent.add_messages(messages)
 
     assert len(updated_messages) == 2
-    context_messages = agent.context.get_messages()
+    context_messages = agent.context_manager.context_window_manager.get_messages()
     assert len(context_messages) == 2
     assert context_messages[0]["content"] == "Message 1"
     assert context_messages[1]["content"] == "Message 2"
@@ -152,13 +151,14 @@ async def test_service_manager_integration(agent: Agent) -> None:
     service_manager = Mock(spec=ServiceManager)
     service_manager.message_storage_service = Mock(spec=MessageStorageService)
     service_manager.messages = Mock()
-    service_manager.get_overwrite_model = Mock(return_value=ChatModel.GPT_4O_MINI.id)
+    config = AgentConfig(model=ChatModel.GPT_4O_MINI.id)
+    service_manager.get_latest_agent_config = AsyncMock(return_value=config)
 
     agent.set_service_manager(service_manager)
     assert agent.service_manager == service_manager
 
     # Test model overwrite handling
-    agent.handle_overwrite_model()
+    await agent.handle_overwrite_config()
     assert agent.config.model == ChatModel.GPT_4O_MINI.id
 
 

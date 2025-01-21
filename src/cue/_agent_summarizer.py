@@ -120,3 +120,40 @@ such as filename or path etc, and be concise.
         except Exception as e:
             logger.error(f"{self.tag} error: {str(e)}")
             return None
+
+
+def create_summarizer(config: AgentConfig) -> ContentSummarizer:
+    """
+    Create a ContentSummarizer with appropriate model selection based on the agent's config.
+
+    Args:
+        config (AgentConfig): The agent's configuration
+
+    Returns:
+        ContentSummarizer: Configured summarizer instance
+    """
+    summarizer_config = AgentConfig(
+        model=_get_summarizer_model(config.model),
+        api_key=config.api_key,
+        openai_api_key=config.openai_api_key,
+        anthropic_api_key=config.anthropic_api_key,
+        gemini_api_key=config.gemini_api_key,
+        use_cue=config.use_cue,
+    )
+
+    return ContentSummarizer(summarizer_config)
+
+
+def _get_summarizer_model(agent_model: str) -> str:
+    """
+    Determine the appropriate summarizer model based on the agent's model.
+
+    Args:
+        agent_model (str): The model name used by the agent
+
+    Returns:
+        str: The model name to use for the summarizer
+    """
+    if "claude" in agent_model.lower():
+        return "claude-3-5-haiku-20241022"
+    return "gpt-4o-mini"

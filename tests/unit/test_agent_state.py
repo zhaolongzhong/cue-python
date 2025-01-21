@@ -10,7 +10,6 @@ def test_agent_state_initialization():
     state = AgentState()
     assert not state.has_initialized
     assert isinstance(state.metrics, AgentMetrics)
-    assert state.conversation_context is None
     assert state.system_context is None
     assert state.system_message_param is None
 

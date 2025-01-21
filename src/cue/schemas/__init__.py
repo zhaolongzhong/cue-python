@@ -24,6 +24,5 @@ from .assistant_memory import (
     AssistantMemoryUpdate as AssistantMemoryUpdate,
     RelevantMemoriesResponse as RelevantMemoriesResponse,
 )
-from .conversation_context import ConversationContext as ConversationContext
 from .message_param_factory import MessageParamFactory as MessageParamFactory
 from .message_create_factory import MessageCreateFactory as MessageCreateFactory

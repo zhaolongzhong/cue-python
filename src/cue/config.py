@@ -1,50 +1,45 @@
+# src/cue/config.py
+import os
 import sys
+import logging
 import platform
-from typing import Any, ClassVar, Optional
-from functools import lru_cache
+from enum import Enum
+from typing import ClassVar, Optional
 
-from pydantic import PostgresDsn, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
+
+
+class Environment(str, Enum):
+    DEVELOPMENT = "development"
+    PRODUCTION = "production"
+    TEST = "test"
 
 
 class Settings(BaseSettings):
+    ENVIRONMENT: str = Environment.PRODUCTION.value
     API_URL: str = ""  # Default to localhost
     AGENTS_CONFIG_FILE: str = ""
-    POSTGRES_HOST: Optional[str] = "127.0.0.1"
-    POSTGRES_USER: Optional[str] = "postgres"
-    POSTGRES_PASSWORD: Optional[str] = "password"
-    POSTGRES_DB: Optional[str] = "agent_db"
-    POSTGRES_PORT: Optional[int] = "5432"
-    DATABASE_URI: Optional[str] = None
     ACCESS_TOKEN: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
 
-    @field_validator("DATABASE_URI", mode="before")
-    def assemble_db_connection(cls, v: Optional[str], info: ValidationInfo) -> Any:
-        assert info.data is not None
-        values = info.data
-        if isinstance(v, str):
-            return v
-        return str(
-            PostgresDsn.build(
-                scheme="postgresql+asyncpg",
-                host=values.get("POSTGRES_HOST"),
-                path=values.get("POSTGRES_DB"),
-                port=values.get("POSTGRES_PORT"),
-                username=values.get("POSTGRES_USER"),
-                password=values.get("POSTGRES_PASSWORD"),
-            )
-        )
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == Environment.PRODUCTION.value
 
-    if "pytest" in sys.modules:
-        env_file: ClassVar[str] = ".env.test"
-    else:
-        env_file: ClassVar[str] = ".env"
+    @property
+    def is_development(self) -> bool:
+        return self.ENVIRONMENT == Environment.DEVELOPMENT.value
+
+    @property
+    def is_test(self) -> bool:
+        return self.ENVIRONMENT == Environment.TEST.value or "pytest" in sys.modules
 
     model_config = SettingsConfigDict(
-        env_file=env_file,
+        env_file=".env.production",
         env_file_encoding="utf-8",
         from_attributes=True,
         extra="ignore",
@@ -58,6 +53,24 @@ class Settings(BaseSettings):
         return base_url
 
 
-@lru_cache(maxsize=1)
+class SettingsManager:
+    _instance: ClassVar[Optional[Settings]] = None
+
+    @classmethod
+    def get_settings(cls) -> Settings:
+        if cls._instance is None:
+            env = os.getenv("ENVIRONMENT", Environment.PRODUCTION.value)
+            logger.info(f"Loading settings for environment: {env}")
+
+            if env == Environment.DEVELOPMENT.value:
+                cls._instance = Settings(_env_file=".env.development")
+            elif env == Environment.TEST.value:
+                cls._instance = Settings(_env_file=".env.test")
+            else:
+                cls._instance = Settings(_env_file=".env.production")
+
+        return cls._instance
+
+
 def get_settings() -> Settings:
-    return Settings()
+    return SettingsManager.get_settings()

@@ -26,7 +26,7 @@ class OpenAIClient(LLMRequest):
     ):
         api_key = config.openai_api_key or os.environ.get("OPENAI_API_KEY")
         if not api_key:
-            raise ValueError("API key is missing in both config and settings.")
+            raise ValueError(f"API key is missing in both config and settings. {config}")
 
         self.client = openai.AsyncOpenAI(api_key=api_key)
         self.config = config

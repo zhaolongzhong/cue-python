@@ -4,7 +4,7 @@ import asyncio
 import logging
 from enum import Enum
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 
 from fastapi import WebSocket
@@ -89,7 +89,7 @@ class ConnectionManager:
                 client_id=client_id,
                 user_id=user_id,
                 state=ConnectionState.PENDING,
-                connected_at=datetime.utcnow(),
+                connected_at=datetime.now(timezone.utc),
             )
             self.connections[session_id] = conn
             self.client_sessions[client_id] = session_id

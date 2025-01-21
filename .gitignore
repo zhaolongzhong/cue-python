@@ -10,7 +10,8 @@ venv/
 .venv/
 logs/
 .env
-.env.prod
+.env.development
+.env.production
 
 **/*memory.jsonl*
 

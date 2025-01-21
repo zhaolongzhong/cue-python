@@ -3,6 +3,8 @@ from typing import Union, Optional
 
 from pydantic import Field, BaseModel, ConfigDict
 
+from .agent_event import AgentEventPayload, AgentStatePayload, AgentControlPayload
+
 __all__ = [
     "EventMessageType",
     "ClientEventPayload",
@@ -28,6 +30,9 @@ class EventMessageType(str, Enum):
     ERROR = "error"
     MESSAGE = "message"
     MESSAGE_CHUNK = "message_chunk"
+    AGENT_STATE = "agent_state"
+    AGENT_CONTROL = "agent_control"
+    AGENT_EVENT = "agent_event"
 
 
 class MessagePayloadBase(BaseModel):
@@ -71,6 +76,11 @@ EventPayload = Union[
     PingPongEventPayload,
     MessagePayload,
     GenericMessagePayload,
+    MessageChunkEventPayload,
+    MessageEventPayload,
+    AgentEventPayload,
+    AgentControlPayload,
+    AgentStatePayload,
 ]
 
 

@@ -7,7 +7,11 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from ..config import get_settings
+
 logger = logging.getLogger(__name__)
+
+settings = get_settings()
 
 
 class DebugUtils:
@@ -124,7 +128,9 @@ class DebugUtils:
 
     @staticmethod
     def log_chat(msg: dict, _tag: Optional[str] = None) -> None:
-        """Save user ans assistant message to a file"""
+        """Save user and assistant message to a file"""
+        if settings.is_production:
+            return
         base_dir = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
         user_input_path = base_dir / "logs/chat.jsonl"
         user_input_path.parent.mkdir(parents=True, exist_ok=True)

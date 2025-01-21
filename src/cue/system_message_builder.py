@@ -1,15 +1,11 @@
-from typing import Optional
-
 from .types import AgentConfig, MessageParam
-from .schemas import ConversationContext
 
 
 class SystemMessageBuilder:
-    def __init__(self, agent_id: str, config: AgentConfig):
-        self.agent_id = agent_id.strip().replace(" ", "_")
+    def __init__(self, config: AgentConfig):
+        self.agent_id = config.id.strip().replace(" ", "_")
         self.config = config
         self.other_agents_info = ""
-        self.conversation_context: Optional[ConversationContext] = None
         self.enable_services = config.enable_services
 
     def build_instruction_block(self) -> str:
@@ -41,10 +37,6 @@ class SystemMessageBuilder:
         # Add other agents info if available
         if self.other_agents_info:
             instruction += f"\n* You are aware of the following other agents:\n{self.other_agents_info}"
-
-        # Add conversation context for non-primary agents
-        if not self.config.is_primary and self.conversation_context:
-            instruction += self._get_conversation_context()
 
         return instruction
 
@@ -277,19 +269,9 @@ You are {name}, a primary agent in a multi-agent system. Please follow these cor
 2. All responses not using `coordinate` will be sent directly to the user, so please format them accordingly
 """
 
-    def _get_conversation_context(self) -> str:
-        """Get the conversation context information."""
-        if not self.conversation_context:
-            return ""
-        return f"\n* Current participants in this conversation are:\n{','.join(self.conversation_context.participants)}"
-
     def set_other_agents_info(self, info: str) -> None:
         """Set information about other agents in the system."""
         self.other_agents_info = info
-
-    def set_conversation_context(self, context: ConversationContext) -> None:
-        """Set the current conversation context."""
-        self.conversation_context = context
 
     def build(self) -> MessageParam:
         """Build and return the complete system message."""

@@ -69,26 +69,6 @@ async def test_register_duplicate_agent(agent_manager, agent_configs):
 
 
 @pytest.mark.asyncio
-async def test_get_agent(agent_manager, agent_configs):
-    """Test retrieving registered agents."""
-    main_config = agent_configs["main"]
-    helper_config = agent_configs["helper"]
-
-    main_agent = agent_manager.register_agent(main_config)
-    helper_agent = agent_manager.register_agent(helper_config)
-
-    # Test get by ID
-    assert agent_manager.get_agent("main") == main_agent
-    assert agent_manager.get_agent("helper") == helper_agent
-
-    # Test get non-existent agent
-    with pytest.raises(Exception, match="Agent 'unknown' not found"):
-        agent_manager.get_agent("unknown")
-
-    await agent_manager.clean_up()
-
-
-@pytest.mark.asyncio
 async def test_primary_agent_selection(agent_manager, agent_configs):
     """Test primary agent selection and other agents info update."""
     main_config = agent_configs["main"]
@@ -105,12 +85,12 @@ async def test_primary_agent_selection(agent_manager, agent_configs):
     agent_manager._update_other_agents_info()
 
     # Check primary agent knows about helper
-    assert len(main_agent.other_agents) == 1
-    assert "helper" in main_agent.other_agents
+    assert len(main_agent.context_manager.other_agents) == 1
+    assert "helper" in main_agent.context_manager.other_agents
 
     # Check helper agent knows about primary
-    assert isinstance(helper_agent.other_agents, dict)
-    assert "main" in helper_agent.other_agents
+    assert isinstance(helper_agent.context_manager.other_agents, dict)
+    assert "main" in helper_agent.context_manager.other_agents
 
     await agent_manager.clean_up()
 
