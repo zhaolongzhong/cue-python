@@ -22,7 +22,7 @@ from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
 from .context import TaskContextManager, ContextWindowManager, SystemContextManager, ProjectContextManager
 from .schemas import ConversationContext
 from .services import ServiceManager
-from ._agent_summarizer import ContentSummarizer
+from ._agent_summarizer import ContentSummarizer, create_summarizer
 from .memory.memory_manager import DynamicMemoryManager
 from .system_message_builder import SystemMessageBuilder
 from .services.message_storage_service import MessageStorageService
@@ -36,13 +36,7 @@ class Agent:
         self.config = config
         self.state = AgentState()
         self.tool_manager: Optional[ToolManager] = None
-        self.summarizer = ContentSummarizer(
-            AgentConfig(
-                model="claude-3-5-haiku-20241022" if "claude" in config.model else "gpt-4o-mini",
-                api_key=config.api_key,
-                use_cue=config.use_cue,
-            )
-        )
+        self.summarizer: ContentSummarizer = create_summarizer(config)
         self.system_context_manager = SystemContextManager(
             metrics=self.state.get_metrics(), token_stats=self.state.get_token_stats()
         )
@@ -165,7 +159,9 @@ class Agent:
         if self.tool_manager:
             await self.tool_manager.clean_up()
 
-    async def add_message(self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
+    async def add_message(
+        self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]
+    ) -> Union[CompletionResponse, ToolResponseWrapper, MessageParam]:
         messages = await self.add_messages([message])
         if messages:
             return messages[0]
@@ -264,7 +260,7 @@ class Agent:
         tool_manager: ToolManager,
         run_metadata: RunMetadata,
         author: Optional[Author] = None,
-    ):
+    ) -> Union[CompletionResponse, ToolCallToolUseBlock]:
         try:
             self.metadata = run_metadata
             await self._initialize(tool_manager)
@@ -344,11 +340,18 @@ class Agent:
 
         return messages_content
 
-    def handle_overwrite_model(self):
-        override_model = self.service_manager.get_overwrite_model() if self.service_manager else None
-        if override_model and override_model != self.client.model:
-            self.config = self.config.model_copy()
-            self.config.model = override_model
+    async def handle_overwrite_config(self):
+        if not self.service_manager:
+            return
+        override_config: AgentConfig = await self.service_manager.get_latest_config()
+        if not override_config:
+            return
+        self.config = self.config.model_copy()
+        if override_config.model != self.client.model or (
+            override_config.max_turns > 0 and override_config.max_turns != self.config.max_turns
+        ):
+            self.config.model = override_config.model
+            self.config.max_turns = override_config.max_turns
             self.client = LLMClient(self.config)
             self.update_tools()
 

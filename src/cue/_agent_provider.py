@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 default_model = ChatModel.GPT_4O_MINI.id
 
+settings = get_settings()
+
 main_agent = AgentConfig(
     id="main",
     name="main",
@@ -24,7 +26,7 @@ main_agent = AgentConfig(
     max_context_tokens=12000,
     tools=[Tool.Edit, Tool.Bash, Tool.Memory, Tool.Coordinate],
     feature_flag=FeatureFlag(enable_services=True, enable_storage=True),
-    api_key=get_settings().OPENAI_API_KEY,
+    openai_api_key=settings.OPENAI_API_KEY,
 )
 
 agent_o = AgentConfig(
@@ -34,7 +36,7 @@ agent_o = AgentConfig(
     instruction="You are an expert AI assistant with advanced reasoning capabilities.",
     model=ChatModel.O1_MINI.id,
     tools=[Tool.Edit],
-    api_key=get_settings().OPENAI_API_KEY,
+    openai_api_key=settings.OPENAI_API_KEY,
 )
 
 agent_claude = AgentConfig(
@@ -43,7 +45,7 @@ agent_claude = AgentConfig(
     instruction="You are an expert AI assistant with advanced reasoning capabilities.",
     model=ChatModel.CLAUDE_3_5_SONNET_20241022.id,
     tools=[Tool.Edit],
-    api_key=get_settings().ANTHROPIC_API_KEY,
+    api_key=settings.ANTHROPIC_API_KEY,
 )
 
 browse_agent = AgentConfig(
@@ -102,7 +104,8 @@ class AgentProvider:
             logger.info("No agents found in config file, use default agents.")
             configs = self._default_configs.copy()
         self.configs = configs
-        logger.info(f"self.configs: {configs}")
+        for config in self._default_configs.values():
+            logger.info(f"self.config: {config.model_dump_json(indent=4, exclude_none=True)}")
         return configs
 
     def get_primary_agent(self) -> Optional[AgentConfig]:
@@ -170,15 +173,15 @@ class AgentProvider:
             model=config_dict.get("model", "gpt-4o-mini"),
             api_key=config_dict.get("api_key", None),
             use_cue=config_dict.get("use_cue", True),
-            openai_api_key=config_dict.get("openai_api_key", None),
-            anthropic_api_key=config_dict.get("anthropic_api_key", None),
-            gemini_api_key=config_dict.get("gemini_api_key", None),
+            openai_api_key=config_dict.get("openai_api_key", settings.OPENAI_API_KEY),
+            anthropic_api_key=config_dict.get("anthropic_api_key", settings.ANTHROPIC_API_KEY),
+            gemini_api_key=config_dict.get("gemini_api_key", settings.GEMINI_API_KEY),
             project_context_path=config_dict.get("project_context_path"),
             tools=tools,
             enable_mcp=config_dict.get("enable_mcp", False),
             is_primary=config_dict.get("is_primary", False),
             temperature=config_dict.get("temperature", 0.7),
-            max_tokens=config_dict.get("max_tokens", 1000),
+            max_tokens=config_dict.get("max_tokens", 4096),
             feature_flag=FeatureFlag(**config_dict.get("feature_flag", {})),
         )
 

@@ -152,13 +152,14 @@ async def test_service_manager_integration(agent: Agent) -> None:
     service_manager = Mock(spec=ServiceManager)
     service_manager.message_storage_service = Mock(spec=MessageStorageService)
     service_manager.messages = Mock()
-    service_manager.get_overwrite_model = Mock(return_value=ChatModel.GPT_4O_MINI.id)
+    config = AgentConfig(model=ChatModel.GPT_4O_MINI.id)
+    service_manager.get_latest_config = AsyncMock(return_value=config)
 
     agent.set_service_manager(service_manager)
     assert agent.service_manager == service_manager
 
     # Test model overwrite handling
-    agent.handle_overwrite_model()
+    await agent.handle_overwrite_config()
     assert agent.config.model == ChatModel.GPT_4O_MINI.id
 
 

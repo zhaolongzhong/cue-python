@@ -272,7 +272,7 @@ class ServiceManager:
                 if data.get("status") != "ok":
                     logger.error(f"Health check returned unexpected status: {data}")
                     raise ValueError(f"Unexpected health check status: {data.get('status')}")
-                logger.debug("Server is available based on health check.")
+                logger.debug(f"Server is available based on health check. {health_url}")
                 return True
         except asyncio.TimeoutError:
             logger.error("Health check request timed out.")
@@ -307,13 +307,16 @@ class ServiceManager:
 
     async def _get_assistant(self, id: str) -> Assistant:
         assistant = await self.assistants.get(self.assistant_id)
-        if assistant.metadata and assistant.metadata.model:
-            self.overwrite_agent_config = AgentConfig(model=assistant.metadata.model)
+        if assistant.metadata:
+            self.overwrite_agent_config = AgentConfig(
+                model=assistant.metadata.model,
+                max_turns=assistant.metadata.max_turns,
+            )
+        return assistant
 
-    def get_overwrite_model(self) -> Optional[str]:
-        if self.overwrite_agent_config:
-            return self.overwrite_agent_config.model
-        return None
+    async def get_latest_config(self) -> Optional[AgentConfig]:
+        await self._get_assistant(self.assistant_id)
+        return self.overwrite_agent_config
 
     def get_conversation_metadata(self) -> dict:
         medadata = {

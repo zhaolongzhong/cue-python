@@ -33,6 +33,7 @@ class AgentManager:
     ):
         logger.info("AgentManager initialized")
         self.prompt_callback = prompt_callback
+        self.user_message_queue: asyncio.Queue[str] = asyncio.Queue()
         self.loop = loop or asyncio.get_event_loop()
         self.agent_loop = AgentLoop()
         self._agents: dict[str, Agent] = {}
@@ -42,7 +43,7 @@ class AgentManager:
         self.tool_manager: Optional[ToolManager] = None
         self.run_metadata: Optional[RunMetadata] = None
         self.console_utils = console_utils
-        self.user_message_queue: asyncio.Queue[str] = asyncio.Queue()
+
         self.execute_run_task: Optional[asyncio.Task] = None
         self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
@@ -276,11 +277,13 @@ class AgentManager:
                 if self.execute_run_task and not self.execute_run_task.done():
                     # Inject the message dynamically
                     await self.inject_user_message(user_message)
+                    self.run_metadata.current_turn = 0
                     logger.debug("handle_message - User message injected dynamically.")
                 else:
                     # Start a new run
                     logger.debug("handle_message - User message queued for processing.")
                     self.run_metadata.user_messages.append(user_message)
+                    self.run_metadata.current_turn = 0
                     await self.start_run(
                         self.active_agent.id, user_message, self.run_metadata, callback=self.handle_response
                     )
@@ -303,7 +306,7 @@ class AgentManager:
     async def inject_user_message(self, user_input: str) -> None:
         """Inject a user message into the ongoing run."""
         logger.debug(f"Injecting user message: {user_input}")
-        await self.user_message_queue.put(user_input)
+        await self.agent_loop.add_user_message(user_input)
 
     def register_agent(self, config: AgentConfig) -> Agent:
         if config.id in self._agents:
