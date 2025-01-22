@@ -9,11 +9,14 @@ check_uv_installed() {
     if ! command -v uv &> /dev/null; then
         echo "UV is not installed. Installing UV..."
         curl -LsSf https://astral.sh/uv/install.sh | bash
-
-        # Add UV to PATH if not already there
-        if [[ ":$PATH:" != *":$HOME/.cargo/bin:"* ]]; then
-            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.bash_profile
-            export PATH="$HOME/.cargo/bin:$PATH"
+        
+        # Source the environment immediately after installation
+        if [ -f "$HOME/.local/bin/env" ]; then
+            echo "Sourcing UV environment..."
+            source "$HOME/.local/bin/env"
+        else
+            echo "Error: UV environment file not found at $HOME/.local/bin/env"
+            exit 1
         fi
     else
         echo "UV is already installed."
