@@ -13,7 +13,7 @@ class MessageStorageService:
         self.message_client = message_client
 
     async def persist_message(
-        self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]
+        self, conversation_id: str, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]
     ) -> Union[CompletionResponse, ToolResponseWrapper, MessageParam]:
         if not isinstance(message, (CompletionResponse, ToolResponseWrapper, MessageParam)):
             logger.error("Unexpect message type to persist")
@@ -23,7 +23,8 @@ class MessageStorageService:
             return message
 
         try:
-            message_create = MessageCreateFactory.create_from(message)
+            message_create = MessageCreateFactory.create_from(message=message)
+            message_create.conversation_id = conversation_id
             persisted_message = await self._persist_message(message_create)
             if persisted_message:
                 msg_id = persisted_message.id
@@ -42,7 +43,7 @@ class MessageStorageService:
         """
         return await self.message_client.create(message_create)
 
-    async def get_messages_asc(self, limit: int = 10) -> list[MessageParam]:
+    async def get_messages_asc(self, conversation_id: str, limit: int = 10) -> list[MessageParam]:
         """
         Get messages in ascending order (oldest to newest) matching natural conversation flow.
 
@@ -58,7 +59,7 @@ class MessageStorageService:
             # Messages are already in chronological order, ready for display
         """
 
-        messages = await self.message_client.get_conversation_messages(limit=limit)
+        messages = await self.message_client.get_conversation_messages(conversation_id=conversation_id, limit=limit)
         message_params = [
             MessageParamFactory.from_message(message, force_str_content=True, truncate_length=250)
             for message in reversed(messages)  # Reverse the DESC order from DB to get ASC

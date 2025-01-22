@@ -55,7 +55,9 @@ def _setup_development_config() -> None:
         debug_log_path = os.path.join(log_dir, "debug.log")
 
         # File handler for errors
-        error_log_handler = logging.FileHandler(error_log_path, encoding="utf-8")
+        error_log_handler = TimedRotatingFileHandler(
+            error_log_path, when="midnight", interval=1, backupCount=5, encoding="utf-8"
+        )
         error_log_handler.setLevel(logging.ERROR)
         error_log_handler.setFormatter(formatter)
         handlers.append(error_log_handler)

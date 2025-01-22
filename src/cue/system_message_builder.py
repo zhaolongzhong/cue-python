@@ -1,21 +1,42 @@
 from .types import AgentConfig, MessageParam
+from ._session_context import SessionContext
 
 
 class SystemMessageBuilder:
-    def __init__(self, config: AgentConfig):
+    def __init__(
+        self,
+        session_context: SessionContext,
+        config: AgentConfig,
+        other_agents: dict[str, dict[str, str]] = None,
+    ):
+        self.session_context = session_context
         self.agent_id = config.id.strip().replace(" ", "_")
         self.config = config
-        self.other_agents_info = ""
+        self.other_agents = other_agents
         self.enable_services = config.enable_services
+        if other_agents:
+            agents_list = [f"{agent_id} ({info['name']})" for agent_id, info in other_agents.items()]
+            self.other_agents_info = "Available agents: " + ", ".join(agents_list)
+        else:
+            self.other_agents_info = None
 
     def build_instruction_block(self) -> str:
         """Build the core instruction block for the system message."""
         instruction = ""
 
+        instruction += (
+            "\n* Here is your identity info: \n"
+            f"- id (or assistant_id): {self.agent_id}, "
+            f"- conversation_id: {self.session_context.conversation_id}, where are the message from or persisted.\n"
+            f"- name: {self.config.name}"
+            f"- assistant_id or conversation_id are used when using tool like memory or automation,"
+            " or collaborate with other agents."
+        )
+
         # Start with behavioral guidelines and bootstrap instructions for primary agents
         if self.config.is_primary:
             instruction += self._get_behavioral_guidelines()
-            instruction += self._get_bootstrap_instructions()
+            # instruction += self._get_bootstrap_instructions()
 
         # Add custom instruction if specified
         if self.config.instruction:

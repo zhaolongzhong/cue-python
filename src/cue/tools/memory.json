@@ -6,10 +6,20 @@
         "parameters": {
             "type": "object",
             "properties": {
+                "assistant_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the assistant for which memory operations will be performed. Required for all memory operations to maintain context and ensure proper access control."
+                },
                 "command": {
                     "type": "string",
                     "description": "The memory operation to perform: 'view', 'recall', 'create', 'update', or 'delete'.",
-                    "enum": ["view", "recall", "create", "update", "delete"]
+                    "enum": [
+                        "view",
+                        "recall",
+                        "create",
+                        "update",
+                        "delete"
+                    ]
                 },
                 "query": {
                     "type": "string",
@@ -28,7 +38,10 @@
                     "description": "New content string used for create and update commands"
                 }
             },
-            "required": ["command"]
+            "required": [
+                "assistant_id",
+                "command"
+            ]
         }
     }
 }

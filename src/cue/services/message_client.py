@@ -12,14 +12,10 @@ class MessageClient(ResourceClient):
 
     def __init__(self, http: HTTPTransport, ws: Optional[WebSocketTransport] = None):
         super().__init__(http, ws)
-        self.default_conversation_id: Optional[str] = None
-
-    def set_default_conversation_id(self, conversation_id):
-        self.default_conversation_id = conversation_id
 
     async def create(self, message: MessageCreate) -> Message:
-        if message.conversation_id is None and self.default_conversation_id:
-            message.conversation_id = self.default_conversation_id
+        if not message.conversation_id:
+            raise Exception("No conversation id provided")
         response = await self._http.request("POST", "/messages", data=message.model_dump())
         return Message(**response)
 
@@ -29,14 +25,12 @@ class MessageClient(ResourceClient):
 
     async def get_conversation_messages(
         self,
-        conversation_id: Optional[str] = None,
+        conversation_id: str,
         skip: int = 0,
         limit: int = 15,
         role: Optional[str] = None,
         content_type: Optional[str] = None,
     ) -> list[Message]:
-        if not conversation_id:
-            conversation_id = self.default_conversation_id
         if not conversation_id:
             raise Exception("No conversation id provided")
 

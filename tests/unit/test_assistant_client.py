@@ -78,10 +78,7 @@ async def test_get_project_context(mock_http_transport, base_assistant_data):
     mock_http_transport.request.return_value = mock_data
 
     client = AssistantClient(http=mock_http_transport)
-    client._default_assistant_id = "asst_123"
-
-    result = await client.get_project_context()
-
+    result = await client.get_project_context(assistant_id="asst_123")
     assert result == {"project": "test_project"}
 
 
@@ -91,11 +88,8 @@ async def test_get_system_context(mock_http_transport, base_assistant_data):
         base_assistant_data, metadata={"instruction": "test instruction", "system": "test system"}
     )
     mock_http_transport.request.return_value = mock_data
-
     client = AssistantClient(http=mock_http_transport)
-    client._default_assistant_id = "asst_123"
-
-    result = await client.get_system_context()
+    result = await client.get_system_context(assistant_id="asst_123")
 
     assert (
         result
@@ -109,11 +103,8 @@ async def test_update_assistant(mock_http_transport, base_assistant_data):
     mock_http_transport.request.return_value = mock_data
 
     client = AssistantClient(http=mock_http_transport)
-    client._default_assistant_id = "asst_123"
-
     assistant_update = AssistantUpdate(name="Updated Assistant")
-
-    result = await client.update(assistant_update)
+    result = await client.update(assistant_id="asst_123", assistant=assistant_update)
 
     mock_http_transport.request.assert_called_once_with(
         "PUT", "/assistants/asst_123", data=assistant_update.model_dump()
@@ -150,20 +141,6 @@ async def test_delete_assistant(mock_http_transport):
     await client.delete("asst_123")
 
     mock_http_transport.request.assert_called_once_with("DELETE", "/assistants/asst_123")
-
-
-@pytest.mark.asyncio
-async def test_create_default_assistant(mock_http_transport, base_assistant_data):
-    mock_data = create_mock_response(base_assistant_data, name="default", metadata={"is_primary": True})
-    mock_http_transport.request.return_value = mock_data
-    client = AssistantClient(http=mock_http_transport)
-
-    result = await client.create_default_assistant()
-
-    assert result == "asst_123"
-    assert client._default_assistant_id == "asst_123"
-    http_request_data = AssistantCreate(name="default", metadata=AssistantMetadata(is_primary=True)).model_dump()
-    mock_http_transport.request.assert_called_once_with("POST", "/assistants", data=http_request_data)
 
 
 @pytest.mark.asyncio

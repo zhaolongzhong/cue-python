@@ -13,14 +13,6 @@ class AutomationClient(ResourceClient):
 
     def __init__(self, http: HTTPTransport, ws: Optional[WebSocketTransport] = None):
         super().__init__(http, ws)
-        self._default_conversation_id: Optional[str] = None
-
-    def set_default_conversation_id(self, conversation_id):
-        self._default_conversation_id = conversation_id
-
-    @property
-    def conversation_id(self) -> str:
-        return self._default_conversation_id
 
     async def create(self, automation: AutomationCreate) -> Automation:
         """

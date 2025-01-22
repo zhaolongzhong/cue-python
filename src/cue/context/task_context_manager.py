@@ -2,24 +2,33 @@ import logging
 from typing import Any, Optional
 from datetime import datetime
 
-from cue.services.service_manager import ServiceManager
-
 from ..schemas import Message
+from .._session_context import SessionContext
 from ..utils.token_counter import TokenCounter
+from ..services.service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
 
 class TaskContextManager:
-    def __init__(self, max_tokens: int = 2000, max_chars: int = 1000, service_manager: Optional[ServiceManager] = None):
+    def __init__(
+        self,
+        session_context: SessionContext,
+        service_manager: ServiceManager,
+        max_tokens: int = 2000,
+        max_chars: int = 1000,
+    ):
         """
         Initialize the TaskContextManager with a maximum token limit.
 
         Args:
+            session_context (SessionContext): The session context
             max_tokens (int): Maximum number of tokens to maintain in task context
             max_chars (int): Maximum characters for each message entry
             message_client (Optional[MessageClient]): Client for loading messages from remote
         """
+        self.session_context = session_context
+        self.service_manager = service_manager
         self.max_tokens = max_tokens
         self.max_chars: int = max_chars
         self.task_messages: dict[str, str] = {}  # msg_id -> formatted content
@@ -32,22 +41,18 @@ class TaskContextManager:
             "current_goal": None,
             "conversation_id": None,  # Set when loading from remote
         }
-        self.message_client = service_manager.messages if service_manager else None
 
-    async def load_from_remote(self, conversation_id: Optional[str] = None) -> None:
+    async def load_from_remote(self) -> None:
         """
         Load task context from remote message history.
-
-        Args:
-            conversation_id (str): The conversation to load messages from
         """
-        if not self.message_client:
+        if not self.service_manager.messages:
             logger.warning("No message client configured, skipping remote load")
             return
-
+        conversation_id = self.session_context.conversation_id
         try:
             # Load user messages from remote
-            messages = await self.message_client.get_conversation_messages(
+            messages = await self.service_manager.messages.get_conversation_messages(
                 conversation_id=conversation_id,
                 role="user",
                 content_type="text",

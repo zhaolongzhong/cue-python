@@ -101,14 +101,15 @@ async def test_primary_agent_selection(agent_manager, agent_configs, mock_tool_m
     # Register agents
     main_agent = agent_manager.register_agent(main_config)
     helper_agent = agent_manager.register_agent(helper_config)
-    await main_agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
-    await helper_agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
 
     # Test primary agent is set
     assert agent_manager.primary_agent == main_agent
 
     # Update other agents info
     agent_manager._update_other_agents_info()
+
+    await main_agent.initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
+    await helper_agent.initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
 
     # Check primary agent knows about helper
     assert len(main_agent.context_manager.other_agents) == 1

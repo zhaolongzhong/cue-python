@@ -1,16 +1,38 @@
 from uuid import uuid4
 from datetime import datetime
+from unittest.mock import AsyncMock
 
 import pytest
 
 from cue.schemas import Message
 from cue.types.message import Author, Content, Metadata
+from cue._session_context import SessionContext
+from cue.services.service_manager import ServiceManager
 from cue.context.task_context_manager import TaskContextManager
 
 
 @pytest.fixture
-def task_manager():
-    return TaskContextManager(max_tokens=500, max_chars=200)
+def session_context():
+    return SessionContext()
+
+
+@pytest.fixture
+def service_manager():
+    service_manager = AsyncMock(spec=ServiceManager)
+    assistants = AsyncMock()
+    assistants.get_system_context = AsyncMock(return_value="Test system context")
+    service_manager.assistants = assistants
+    return service_manager
+
+
+@pytest.fixture
+def task_manager(session_context, service_manager):
+    return TaskContextManager(
+        session_context=session_context,
+        service_manager=service_manager,
+        max_tokens=500,
+        max_chars=200,
+    )
 
 
 def create_message(content: str, role: str = "user", msg_id: str = None) -> Message:

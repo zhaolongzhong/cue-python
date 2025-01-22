@@ -6,6 +6,10 @@
         "parameters": {
             "type": "object",
             "properties": {
+                "assistant_id": {
+                    "type": "string",
+                    "description": "Unique identifier of the assistant. Required for all project context operations."
+                },
                 "command": {
                     "type": "string",
                     "description": "The project operation to perform: 'view' and 'update'",

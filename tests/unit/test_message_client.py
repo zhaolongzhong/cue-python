@@ -39,7 +39,6 @@ def mock_http_transport():
 @pytest.fixture
 def client(mock_http_transport):
     client = MessageClient(http=mock_http_transport)
-    client.set_default_conversation_id("conv_123")
     return client
 
 
@@ -48,9 +47,12 @@ async def test_create_message(mock_http_transport, base_message_data):
     """Test creating a message with default conversation ID"""
     mock_http_transport.request.return_value = base_message_data
     client = MessageClient(http=mock_http_transport)
-    client.set_default_conversation_id("conv_123")
 
-    message_create = MessageCreate(author=Author(role="user"), content=Content(content="Test message content"))
+    message_create = MessageCreate(
+        conversation_id="conv_123",
+        author=Author(role="user"),
+        content=Content(content="Test message content"),
+    )
 
     result = await client.create(message_create)
 
@@ -105,9 +107,8 @@ async def test_get_conversation_messages(mock_http_transport, base_message_data)
     ]
     mock_http_transport.request.return_value = mock_data
     client = MessageClient(http=mock_http_transport)
-    client.set_default_conversation_id("conv_123")
 
-    result = await client.get_conversation_messages(skip=0, limit=10)
+    result = await client.get_conversation_messages(conversation_id="conv_123", skip=0, limit=10)
 
     mock_http_transport.request.assert_called_once_with(
         "GET", "/conversations/conv_123/messages", params={"skip": 0, "limit": 10}
@@ -135,15 +136,6 @@ async def test_get_conversation_messages_specific_conversation(mock_http_transpo
 
     assert len(result) == 1
     assert result[0].id == "msg_123"
-
-
-@pytest.mark.asyncio
-async def test_get_conversation_messages_no_id(mock_http_transport):
-    """Test getting messages without conversation ID"""
-    client = MessageClient(http=mock_http_transport)
-
-    with pytest.raises(Exception, match="No conversation id provided"):
-        await client.get_conversation_messages()
 
 
 @pytest.mark.asyncio
