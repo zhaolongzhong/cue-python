@@ -20,6 +20,10 @@ class ChatModel(Enum):
     O1 = ("o1", True, "openai")
     O1_MINI = ("o1-mini", False, "openai")
     O1_PREVIEW = ("o1-preview", False, "openai")
+    LLAMA3_2_OLLAMA = ("llama3.2", False, "ollama")
+    DEEP_SEEK_R1_7B = ("deepseek-r1:7b", False, "ollama")
+    DEEP_SEEK_R1_14B = ("deepseek-r1:14b", False, "ollama")
+    DEEP_SEEK_R1_32B = ("deepseek-r1:32b", False, "ollama")
 
     def __init__(self, id, tool_use_support, provider):
         self.id = id
