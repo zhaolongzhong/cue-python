@@ -58,7 +58,7 @@ def initialize_agent(agent: Agent, mock_tool_manager, mock_service_manager):
     """Return an async function that initializes the agent."""
 
     async def _initialize():
-        await agent._initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
+        await agent.initialize(tool_manager=mock_tool_manager, service_manager=mock_service_manager)
         return agent
 
     return _initialize
@@ -85,7 +85,7 @@ async def test_agent_initialization(agent: Agent, agent_config: AgentConfig) -> 
 @pytest.mark.asyncio
 async def test_agent_initialization_with_tools(agent: Agent, mock_tool_manager: Mock) -> None:
     """Test agent initialization with tool manager."""
-    await agent._initialize(mock_tool_manager)
+    await agent.initialize(mock_tool_manager)
 
     assert agent.state.has_initialized
     assert agent.tool_manager == mock_tool_manager
@@ -100,9 +100,9 @@ async def test_service_manager_integration(agent: Agent, mock_tool_manager: Mock
     service_manager.message_storage_service = Mock(spec=MessageStorageService)
     service_manager.messages = Mock()
     config = AgentConfig(model=ChatModel.GPT_4O_MINI.id)
-    service_manager.get_latest_agent_config = AsyncMock(return_value=config)
+    service_manager.get_agent_config = AsyncMock(return_value=config)
 
-    await agent._initialize(tool_manager=mock_tool_manager, service_manager=service_manager)
+    await agent.initialize(tool_manager=mock_tool_manager, service_manager=service_manager)
     assert agent.state.has_initialized
     assert agent.service_manager == service_manager
 
@@ -192,6 +192,7 @@ async def test_build_context_for_next_agent(initialize_agent) -> None:
 @pytest.mark.asyncio
 async def test_run_message_flow(agent: Agent, mock_tool_manager: Mock) -> None:
     """Test the complete message flow through run()."""
+    await agent.initialize(tool_manager=mock_tool_manager)
     # Mock the client's send_completion_request
     chat_message = ChatCompletionMessage(content="Test response", role="assistant")
     chat_completion = ChatCompletion(
@@ -215,7 +216,7 @@ async def test_run_message_flow(agent: Agent, mock_tool_manager: Mock) -> None:
 
     # Run with metadata
     run_metadata = RunMetadata()
-    response = await agent.run(run_metadata=run_metadata, tool_manager=mock_tool_manager)
+    response = await agent.run(run_metadata=run_metadata)
 
     assert response == mock_response
     assert agent.state.get_token_stats()["actual_usage"] != {}

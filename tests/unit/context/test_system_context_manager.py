@@ -40,8 +40,8 @@ def token_stats():
 
 
 @pytest.fixture
-def system_context_manager(metrics, token_stats, mock_token_counter, mock_service_manager):
-    return SystemContextManager(metrics, token_stats, service_manager=mock_service_manager)
+def system_context_manager(session_context, metrics, token_stats, mock_service_manager):
+    return SystemContextManager(session_context, metrics, token_stats, service_manager=mock_service_manager)
 
 
 @pytest.mark.asyncio
@@ -86,10 +86,10 @@ def test_update_stats(system_context_manager):
     value, tokens = system_context_manager.update_stats("test_key", "Test content", "test_context")
 
     assert value == "Test content"
-    assert tokens == 10
+    assert tokens == 2  # https://platform.openai.com/tokenizer
     assert system_context_manager.metrics["test_key"]["curr"] == "Test content"
     assert system_context_manager.metrics["test_key"]["updated"] is True
-    assert system_context_manager.token_stats["test_context"] == 10
+    assert system_context_manager.token_stats["test_context"] == 2
 
 
 def test_update_stats_unchanged(system_context_manager):

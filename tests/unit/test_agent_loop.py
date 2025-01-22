@@ -52,6 +52,11 @@ def agent(agent_config: AgentConfig) -> Agent:
     mock_agent.persist_message = AsyncMock()
     mock_agent.client = Mock()
     mock_agent.client.process_tools_with_timeout = AsyncMock()
+    mock_agent.tool_manager = Mock()
+    mock_service_manager = Mock()
+    mock_service_manager.monitoring = AsyncMock()
+    mock_service_manager.monitoring.report_exception = AsyncMock()
+    mock_agent.service_manager = mock_service_manager
     return mock_agent
 
 
@@ -72,7 +77,7 @@ def run_metadata() -> RunMetadata:
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_basic_flow(agent: Agent, tool_manager: ToolManager, run_metadata: RunMetadata):
+async def test_agent_loop_basic_flow(agent: Agent, run_metadata: RunMetadata):
     """Test basic agent loop flow with text response."""
     # Setup
     agent_loop = AgentLoop()
@@ -98,17 +103,13 @@ async def test_agent_loop_basic_flow(agent: Agent, tool_manager: ToolManager, ru
     callback = AsyncMock()
 
     # Execute
-    response = await agent_loop.run(
-        agent=agent, tool_manager=tool_manager, run_metadata=run_metadata, callback=callback
-    )
+    response = await agent_loop.run(agent=agent, run_metadata=run_metadata, callback=callback)
 
     # Verify
     assert response == mock_response
     assert run_metadata.current_turn == 1
     agent.run.assert_awaited_once_with(
         run_metadata=run_metadata,
-        tool_manager=tool_manager,
-        service_manager=None,
         author=Author(role="user"),
     )
     agent.add_message.assert_awaited_once()
@@ -116,7 +117,7 @@ async def test_agent_loop_basic_flow(agent: Agent, tool_manager: ToolManager, ru
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_with_tool_calls(agent: Agent, tool_manager: ToolManager, run_metadata: RunMetadata):
+async def test_agent_loop_with_tool_calls(agent: Agent, run_metadata: RunMetadata):
     """Test agent loop with tool calls."""
     # Setup
     agent_loop = AgentLoop()
@@ -171,9 +172,7 @@ async def test_agent_loop_with_tool_calls(agent: Agent, tool_manager: ToolManage
     callback = AsyncMock()
 
     # Execute
-    response = await agent_loop.run(
-        agent=agent, tool_manager=tool_manager, run_metadata=run_metadata, callback=callback
-    )
+    response = await agent_loop.run(agent=agent, run_metadata=run_metadata, callback=callback)
 
     # Verify
     assert response == final_response
@@ -185,7 +184,7 @@ async def test_agent_loop_with_tool_calls(agent: Agent, tool_manager: ToolManage
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_with_agent_transfer(agent: Agent, tool_manager: ToolManager, run_metadata: RunMetadata):
+async def test_agent_loop_with_agent_transfer(agent: Agent, run_metadata: RunMetadata):
     """Test agent loop with agent transfer request."""
     # Setup
     agent_loop = AgentLoop()
@@ -211,7 +210,7 @@ async def test_agent_loop_with_agent_transfer(agent: Agent, tool_manager: ToolMa
     agent.run.return_value = response
 
     # Execute
-    result = await agent_loop.run(agent=agent, tool_manager=tool_manager, run_metadata=run_metadata)
+    result = await agent_loop.run(agent=agent, run_metadata=run_metadata)
 
     # Verify
     assert isinstance(result, AgentTransfer)
@@ -220,14 +219,12 @@ async def test_agent_loop_with_agent_transfer(agent: Agent, tool_manager: ToolMa
     assert result.run_metadata == run_metadata
     agent.run.assert_awaited_once_with(
         run_metadata=run_metadata,
-        tool_manager=tool_manager,
-        service_manager=None,
         author=Author(role="user"),
     )
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_stop(agent: Agent, tool_manager: ToolManager, run_metadata: RunMetadata):
+async def test_agent_loop_stop(agent: Agent, run_metadata: RunMetadata):
     """Test stopping the agent loop."""
     # Setup
     agent_loop = AgentLoop()
@@ -254,9 +251,7 @@ async def test_agent_loop_stop(agent: Agent, tool_manager: ToolManager, run_meta
     agent.run.side_effect = mock_run
 
     # Start the loop in a task
-    agent_loop.execute_run_task = asyncio.create_task(
-        agent_loop.run(agent=agent, tool_manager=tool_manager, run_metadata=run_metadata)
-    )
+    agent_loop.execute_run_task = asyncio.create_task(agent_loop.run(agent=agent, run_metadata=run_metadata))
 
     # Stop the loop
     await agent_loop.stop()
@@ -267,7 +262,7 @@ async def test_agent_loop_stop(agent: Agent, tool_manager: ToolManager, run_meta
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_turn_limit(agent: Agent, tool_manager: ToolManager):
+async def test_agent_loop_turn_limit(agent: Agent):
     """Test agent loop respects turn limits."""
     # Setup
     agent_loop = AgentLoop()
@@ -297,7 +292,7 @@ async def test_agent_loop_turn_limit(agent: Agent, tool_manager: ToolManager):
     agent.run.return_value = summary_response
 
     # Execute
-    response = await agent_loop.run(agent=agent, tool_manager=tool_manager, run_metadata=run_metadata)
+    response = await agent_loop.run(agent=agent, run_metadata=run_metadata)
 
     # Verify
     assert response == summary_response  # Should get summary response
@@ -307,7 +302,7 @@ async def test_agent_loop_turn_limit(agent: Agent, tool_manager: ToolManager):
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_turn_limit_with_production_mode(agent: Agent, tool_manager: ToolManager):
+async def test_agent_loop_turn_limit_with_production_mode(agent: Agent):
     """Test agent loop turn limit behavior in production mode."""
     # Setup
     agent_loop = AgentLoop()
@@ -385,7 +380,7 @@ async def test_agent_loop_turn_limit_with_production_mode(agent: Agent, tool_man
     agent.add_messages.side_effect = mock_add_messages
 
     # Execute
-    response = await agent_loop.run(agent=agent, tool_manager=tool_manager, run_metadata=run_metadata)
+    response = await agent_loop.run(agent=agent, run_metadata=run_metadata)
 
     # Verify
     assert response == summary_response  # Should get the summary response
@@ -409,7 +404,7 @@ async def test_agent_loop_turn_limit_with_production_mode(agent: Agent, tool_man
 
 
 @pytest.mark.asyncio
-async def test_agent_loop_error_handling(agent: Agent, tool_manager: ToolManager, run_metadata: RunMetadata):
+async def test_agent_loop_error_handling(agent: Agent, run_metadata: RunMetadata):
     """Test agent loop handles errors gracefully."""
     # Setup
     agent_loop = AgentLoop()
@@ -420,8 +415,6 @@ async def test_agent_loop_error_handling(agent: Agent, tool_manager: ToolManager
     response = await agent_loop.run(
         agent=agent,
         run_metadata=run_metadata,
-        tool_manager=tool_manager,
-        service_manager=None,
         callback=callback,
     )
 
@@ -429,8 +422,6 @@ async def test_agent_loop_error_handling(agent: Agent, tool_manager: ToolManager
     assert response is None  # Should exit due to error
     agent.run.assert_awaited_once_with(
         run_metadata=run_metadata,
-        tool_manager=tool_manager,
-        service_manager=None,
         author=Author(role="user"),
     )
     callback.assert_not_called()  # Callback should not be called on error

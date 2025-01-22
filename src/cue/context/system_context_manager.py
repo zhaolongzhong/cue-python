@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 from datetime import datetime
 
+from .._session_context import SessionContext
 from ..utils.token_counter import TokenCounter
 from ..services.service_manager import ServiceManager
 
@@ -10,17 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class SystemContextManager:
-    def __init__(self, metrics: dict, token_stats: dict, service_manager: Optional[ServiceManager] = None):
+    def __init__(
+        self,
+        session_context: SessionContext,
+        metrics: dict,
+        token_stats: dict,
+        service_manager: Optional[ServiceManager] = None,
+    ):
+        self.session_context = session_context
         self.metrics = metrics
         self.token_stats = token_stats
         self.token_counter = TokenCounter()
         self.system_context_base: Optional[str] = None
         self.system_context = ""
-        self.service_manager: Optional[ServiceManager] = service_manager
+        self.service_manager = service_manager
 
     async def update_base_context(self) -> None:
         self.system_context_base = self._get_time_context()
-        system_context = await self.service_manager.assistants.get_system_context()
+        system_context = await self.service_manager.assistants.get_system_context(self.session_context.assistant_id)
         logger.info(f"update base system context: {system_context}")
         if system_context:
             self.system_context_base += f"<system_learning>{system_context}</system_learning>"

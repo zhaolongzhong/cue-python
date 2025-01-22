@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -26,8 +27,15 @@ def mock_token_counter():
 
 
 @pytest.fixture
-def project_context_manager(mock_token_counter, mock_service_manager):
-    return ProjectContextManager(path="/test/path/context.txt", service_manager=mock_service_manager)
+def project_context_manager(session_context, mock_service_manager):
+    return ProjectContextManager(
+        session_context=session_context,
+        path="/test/path/context.txt",
+        service_manager=mock_service_manager,
+    )
+
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
@@ -35,8 +43,10 @@ async def test_update_context_from_service(project_context_manager, mock_service
     """Test updating context from service manager"""
     await project_context_manager.update_context()
 
-    assert project_context_manager.get_project_context() == "Test project context"
-    assert project_context_manager.get_params()["content"].endswith("<project_context_token>10</project_context_token>")
+    assert (
+        project_context_manager.get_project_context() == "Test project context"
+    )  # https://platform.openai.com/tokenizer
+    assert project_context_manager.get_params()["content"].endswith("<project_context_token>3</project_context_token>")
     mock_service_manager.assistants.get_project_context.assert_called_once()
 
 
@@ -52,13 +62,13 @@ async def test_update_context_from_file(project_context_manager, tmp_path):
     await project_context_manager.update_context()
 
     assert project_context_manager.get_project_context() == test_content
-    assert project_context_manager.get_params()["content"].endswith("<project_context_token>10</project_context_token>")
+    assert project_context_manager.get_params()["content"].endswith("<project_context_token>3</project_context_token>")
 
 
 @pytest.mark.asyncio
-async def test_update_context_no_path(mock_token_counter):
+async def test_update_context_no_path(session_context):
     """Test updating context with no path"""
-    manager = ProjectContextManager(path=None)
+    manager = ProjectContextManager(session_context=session_context, path=None)
     await manager.update_context()
 
     assert manager.get_project_context() is None

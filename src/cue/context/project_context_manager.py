@@ -2,6 +2,8 @@ import logging
 from typing import Optional
 from pathlib import Path
 
+from cue._session_context import SessionContext
+
 from ..utils.token_counter import TokenCounter
 from ..services.service_manager import ServiceManager
 
@@ -9,7 +11,13 @@ logger = logging.getLogger(__name__)
 
 
 class ProjectContextManager:
-    def __init__(self, path: Optional[str], service_manager: Optional[ServiceManager] = None):
+    def __init__(
+        self,
+        session_context: SessionContext,
+        path: Optional[str],
+        service_manager: Optional[ServiceManager] = None,
+    ):
+        self.session_context = session_context
         self.path = path
         self.pre_context: Optional[str] = None
         self._project_context: Optional[str] = None
@@ -20,7 +28,7 @@ class ProjectContextManager:
     async def update_context(self) -> None:
         """Load project context."""
         if self.service_manager:
-            context = await self.service_manager.assistants.get_project_context()
+            context = await self.service_manager.assistants.get_project_context(self.session_context.assistant_id)
             if context:
                 self.pre_context = self._project_context
                 self._project_context = str(context)

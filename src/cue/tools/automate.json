@@ -23,40 +23,34 @@
                 },
                 "conversation_id": {
                     "type": "string",
-                    "description": "ID for tracking the conversation thread, required for create operation"
+                    "description": "ID for tracking the conversation thread, required for automation create operation"
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Title of the automation"
+                },
+                "prompt": {
+                    "type": "string",
+                    "description": "Prompt for the automation"
                 },
                 "schedule": {
-                    "type": "object",
-                    "description": "Schedule configuration for create or update operations",
-                    "properties": {
-                        "title": {
-                            "type": "string",
-                            "description": "Title of the automation"
-                        },
-                        "prompt": {
-                            "type": "string",
-                            "description": "Prompt for the automation"
-                        },
-                        "schedule": {
-                            "type": "string",
-                            "description": "Schedule timing specification in iCal format. Supports both one-time and recurring events. Examples: For one-time event: 'BEGIN:VEVENT\\nDTSTART:20250117T184755Z\\nEND:VEVENT', for recurring event: 'BEGIN:VEVENT\\nDTSTART:20250117T184614Z\\nRRULE:FREQ=MINUTELY;INTERVAL=25\\nEND:VEVENT'"
-                        },
-                        "is_enabled": {
-                            "type": "boolean",
-                            "description": "Whether the automation is enabled",
-                            "default": true
-                        },
-                        "default_timezone": {
-                            "type": "string",
-                            "description": "Default timezone for the automation",
-                            "default": "UTC"
-                        },
-                        "email_enabled": {
-                            "type": "boolean",
-                            "description": "Whether email notifications are enabled",
-                            "default": false
-                        }
-                    }
+                    "type": "string",
+                    "description": "Schedule timing specification in iCal format. Supports both one-time and recurring events. Examples: For one-time event: 'BEGIN:VEVENT\\nDTSTART:20250117T184755Z\\nEND:VEVENT', for recurring event: 'BEGIN:VEVENT\\nDTSTART:20250117T184614Z\\nRRULE:FREQ=MINUTELY;INTERVAL=25\\nEND:VEVENT'"
+                },
+                "is_enabled": {
+                    "type": "boolean",
+                    "description": "Whether the automation is enabled",
+                    "default": true
+                },
+                "default_timezone": {
+                    "type": "string",
+                    "description": "Default timezone for the automation",
+                    "default": "UTC"
+                },
+                "email_enabled": {
+                    "type": "boolean",
+                    "description": "Whether email notifications are enabled",
+                    "default": false
                 }
             },
             "required": [

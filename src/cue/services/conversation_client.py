@@ -17,7 +17,6 @@ class ConversationClient(ResourceClient):
 
     def __init__(self, http: HTTPTransport, ws: Optional[WebSocketTransport] = None):
         super().__init__(http, ws)
-        self._default_conversation_id: Optional[str] = None
 
     async def create(
         self,
@@ -46,7 +45,7 @@ class ConversationClient(ResourceClient):
     async def delete(self, conversation_id: str) -> None:
         await self._http.request("DELETE", f"/conversations/{conversation_id}")
 
-    async def create_default_conversation(self, assistant_id: Optional[str] = None) -> Optional[str]:
+    async def create_default_conversation(self, assistant_id: Optional[str] = None) -> Optional[Conversation]:
         """
         Create a default conversation
         If assistant_id is provided, try to use it to get conversation first.
@@ -55,12 +54,11 @@ class ConversationClient(ResourceClient):
             conversations = await self.get_conversation_by_assistant_id(assistant_id)
             for conversation in conversations:
                 if conversation.metadata and conversation.metadata.is_primary:
-                    return conversation.id
+                    return conversation
         conversation = await self.create(title="Default", metadata={"is_primary": True}, assistant_id=assistant_id)
         if not conversation:
             return
-        self._default_conversation_id = conversation.id
-        return self._default_conversation_id
+        return conversation
 
     async def get_conversation_by_assistant_id(
         self, assistant_id: str, skip: int = 0, limit: int = 50

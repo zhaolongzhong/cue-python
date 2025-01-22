@@ -14,8 +14,6 @@ from .utils import DebugUtils
 from ._agent import Agent
 from .config import get_settings
 from .schemas import ErrorType
-from .tools._tool import ToolManager
-from .services.service_manager import ServiceManager
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +36,6 @@ class AgentLoop:
         self,
         agent: Agent,
         run_metadata: RunMetadata,
-        tool_manager: ToolManager,
-        service_manager: Optional[ServiceManager] = None,
         callback: Optional[Callable[[CompletionResponse], Any]] = None,
         prompt_callback: Optional[Callable] = None,
     ) -> Optional[Union[CompletionResponse, AgentTransfer]]:
@@ -55,7 +51,7 @@ class AgentLoop:
         logger.debug(f"Agent run loop started. {agent.id}")
         response = None
         author = Author(role="user")
-        monitoring = service_manager.monitoring if service_manager else None
+        monitoring = agent.service_manager.monitoring if agent.service_manager else None
 
         while True:
             if self.stop_run_event.is_set():
@@ -77,8 +73,6 @@ class AgentLoop:
             try:
                 response: CompletionResponse = await agent.run(
                     run_metadata=run_metadata,
-                    tool_manager=tool_manager,
-                    service_manager=service_manager,
                     author=author,
                 )
                 run_metadata.current_turn += 1
@@ -134,7 +128,7 @@ class AgentLoop:
                 await callback(response)
 
             tool_result = await agent.client.process_tools_with_timeout(
-                tool_manager=tool_manager,
+                tool_manager=agent.tool_manager,
                 tool_calls=tool_calls,
                 timeout=60,
                 author=response.author,

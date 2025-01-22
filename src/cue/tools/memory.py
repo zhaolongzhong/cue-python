@@ -42,9 +42,11 @@ class MemoryTool(BaseTool):
         limit: Optional[int] = None,
         new_str: Optional[str] = None,
         memory_id: Optional[str] = None,
+        assistant_id: str = None,
         **kwargs,
     ):
         return await self.memory(
+            assistant_id=assistant_id,
             command=command,
             query=query,
             limit=limit,
@@ -56,6 +58,7 @@ class MemoryTool(BaseTool):
     async def memory(
         self,
         *,
+        assistant_id: str = None,
         command: Command,
         query: Optional[str] = None,
         limit: Optional[int] = None,
@@ -68,30 +71,34 @@ class MemoryTool(BaseTool):
             error_msg = "Memory tool is called but external memory is not enabled."
             logger.error(error_msg)
             raise ToolError(error_msg)
+        if assistant_id is None:
+            raise ToolError("Assistant ID is required for memory operations.")
         if command == "view":
             limit = ParameterValidator.safe_int(limit, default=10)
-            return await self.view(memory_id=memory_id, limit=limit.value)
+            return await self.view(assistant_id=assistant_id, memory_id=memory_id, limit=limit.value)
         elif command == "recall":
             limit = ParameterValidator.safe_int(limit, default=10)
-            return await self.recall(query=query, limit=limit.value)
+            return await self.recall(assistant_id=assistant_id, query=query, limit=limit.value)
         elif command == "create":
             if not new_str:
                 raise ToolError("Parameter `new_str` is required for command: create")
-            return await self.create(new_str)
+            return await self.create(assistant_id=assistant_id, new_str=new_str)
         elif command == "update":
             if not new_str:
                 raise ToolError("Parameter `new_str` is required for command: update")
             if not memory_id:
                 raise ToolError("Parameter `memory_id` is required for command: update")
-            return await self.update(new_str=new_str, memory_id=memory_id)
+            return await self.update(assistant_id=assistant_id, new_str=new_str, memory_id=memory_id)
         elif command == "delete":
-            return await self.delete(memory_id)
+            return await self.delete(assistant_id=assistant_id, memory_id=memory_id)
         raise ToolError(
             f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
             f"{', '.join(get_args(Command))}"
         )
 
-    async def view(self, memory_id: Optional[str] = None, limit: Optional[int] = 10) -> ToolResult:
+    async def view(
+        self, assistant_id: str = None, memory_id: Optional[str] = None, limit: Optional[int] = 10
+    ) -> ToolResult:
         response = []
         memory_ids = []
         if memory_id:
@@ -99,10 +106,10 @@ class MemoryTool(BaseTool):
 
         if memory_ids:
             for memory_id in memory_ids:
-                memory = await self.memory_client.get_memory(memory_id=memory_id)
+                memory = await self.memory_client.get_memory(assistant_id=assistant_id, memory_id=memory_id)
                 response.append(memory)
         else:
-            response = await self.memory_client.get_memories(limit=limit)
+            response = await self.memory_client.get_memories(assistant_id=assistant_id, limit=limit)
         response.reverse()
         memory_contents = MemoryFormatter.format_memory_list(
             memories=response,
@@ -115,11 +122,11 @@ class MemoryTool(BaseTool):
         logger.debug(f"view memories: {len(response)}, memory_contents: {memory_contents[:500]}")
         return ToolResult(output=memory_contents)
 
-    async def get_recent_memories(self, limit: Optional[int] = 10) -> dict[str, str]:
+    async def get_recent_memories(self, assistant_id: str, limit: Optional[int] = 10) -> dict[str, str]:
         """Return a dict formatted memories entry in asc order by updated_at"""
         if not self.memory_client:
             return
-        response = await self.memory_client.get_memories(limit=limit)
+        response = await self.memory_client.get_memories(assistant_id=assistant_id, limit=limit)
         memory_dict = {
             memory.id: MemoryFormatter.format_single_memory(
                 memory,
@@ -132,9 +139,9 @@ class MemoryTool(BaseTool):
         }
         return memory_dict
 
-    async def recall(self, query: str, limit: Optional[int] = 10) -> ToolResult:
+    async def recall(self, assistant_id: str, query: str, limit: Optional[int] = 10) -> ToolResult:
         """Implement the recall command"""
-        response = await self.memory_client.search_memories(query, limit=limit)
+        response = await self.memory_client.search_memories(assistant_id=assistant_id, query=query, limit=limit)
         retrieved_memories = response.memories
 
         if len(retrieved_memories) == 0:
@@ -153,26 +160,31 @@ class MemoryTool(BaseTool):
 
     async def update(
         self,
-        new_str: Optional[str],
+        assistant_id: str,
         memory_id: str,
+        new_str: Optional[str],
     ):
         """Implement the update command, which replaces memory content with new_str in the given memory"""
         try:
-            await self.memory_client.update_memory(memory_id=memory_id, memory=AssistantMemoryUpdate(content=new_str))
+            await self.memory_client.update_memory(
+                assistant_id=assistant_id, memory_id=memory_id, memory=AssistantMemoryUpdate(content=new_str)
+            )
             success_msg = f"The memory<id: {memory_id}> has been edited. "
             return ToolResult(output=success_msg)
         except Exception as e:
             raise ToolError(f"Ran into {e} while trying to create a memory for {new_str}") from None
 
-    async def create(self, new_str: str):
+    async def create(self, assistant_id: str, new_str: str):
         """Write the content of a file to a given path; raise a ToolError if an error occurs."""
         try:
-            entry = await self.memory_client.create(AssistantMemoryCreate(content=new_str))
+            entry = await self.memory_client.create(
+                assistant_id=assistant_id, memory=AssistantMemoryCreate(content=new_str)
+            )
             return ToolResult(output=f"Memory created successfully with id: {entry.id}")
         except Exception as e:
             raise ToolError(f"Ran into {e} while trying to create a memory for {new_str}") from None
 
-    async def delete(self, memory_id: str) -> ToolResult:
+    async def delete(self, assistant_id: str, memory_id: str) -> ToolResult:
         """Delete one or more memories. Can accept either a single memory ID or a list of memory IDs."""
         try:
             result = ParameterValidator.safe_string_list(memory_id, ",")
@@ -180,7 +192,7 @@ class MemoryTool(BaseTool):
                 raise ToolError("No memory IDs provided for deletion")
 
             memory_ids = result.value
-            result = await self.memory_client.delete_memories(memory_ids=memory_ids)
+            result = await self.memory_client.delete_memories(assistant_id=assistant_id, memory_ids=memory_ids)
 
             # Format the response message based on the result
             if result["success"]:

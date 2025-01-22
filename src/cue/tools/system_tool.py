@@ -33,11 +33,13 @@ class SystemTool(BaseTool):
         *,
         command: Command,
         new_content: Optional[str] = None,
+        assistant_id: Optional[str] = None,
         **kwargs,
     ):
         return await self.system_tool(
             command=command,
             new_content=new_content,
+            assistant_id=assistant_id,
             **kwargs,
         )
 
@@ -46,6 +48,7 @@ class SystemTool(BaseTool):
         *,
         command: Command,
         new_content: Optional[Union[dict, str]] = None,
+        assistant_id: Optional[str] = None,
         **kwargs,
     ):
         """Perform system operations like "view", "update"""
@@ -54,27 +57,29 @@ class SystemTool(BaseTool):
             logger.error(error_msg)
             raise ToolError(error_msg)
         if command == "view":
-            return await self.view()
+            return await self.view(assistant_id)
         elif command == "update":
             if not new_content:
                 raise ToolError("Parameter `new_content` is required for command: update")
-            return await self.update(new_content=new_content)
+            return await self.update(assistant_id=assistant_id, new_content=new_content)
         raise ToolError(
             f"Unrecognized command {command}. The allowed commands for the {self.name} tool are: "
             f"{', '.join(get_args(Command))}"
         )
 
-    async def view(self) -> ToolResult:
-        response = await self.assistant_client.get_system_context()
+    async def view(self, assistant_id: str) -> ToolResult:
+        response = await self.assistant_client.get_system_context(assistant_id)
         return ToolResult(output=str(response))
 
     async def update(
         self,
+        assistant_id: str,
         new_content: Optional[Union[dict, str]] = None,
     ):
         try:
             await self.assistant_client.update(
-                assistant=AssistantUpdate(metadata=AssistantMetadata(system=new_content))
+                assistant_id=assistant_id,
+                assistant=AssistantUpdate(metadata=AssistantMetadata(system=new_content)),
             )
             success_msg = "System context has been edited."
             return ToolResult(output=success_msg)

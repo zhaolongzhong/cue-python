@@ -28,7 +28,8 @@ class AgentStateManager:
             self._agent_states[agent_id] = new_state
 
             if self._service_manager:
-                await self._broadcast_state_change(agent_id, old_state, new_state, metadata)
+                if new_state == AgentState.ERROR:
+                    await self._broadcast_state_change(agent_id, old_state, new_state, metadata)
 
     def get_agent_state(self, agent_id: str) -> AgentState:
         """Get current state of an agent"""

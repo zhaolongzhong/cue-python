@@ -18,6 +18,7 @@ from .types import (
 )
 from .utils import DebugUtils, TokenCounter, record_usage, record_usage_details
 from .services import ServiceManager
+from ._session_context import SessionContext
 from .context.context_manager import ContextManager
 from .services.message_storage_service import MessageStorageService
 
@@ -28,9 +29,11 @@ class Agent:
     def __init__(self, config: AgentConfig):
         self.id = config.id
         self.config = config
-        self.tool_manager: Optional[ToolManager] = None
         self.tools = None
+        self.other_agents = {}
 
+        self.session_context = SessionContext(assistant_id=self.id)
+        self.tool_manager: Optional[ToolManager] = None
         self.service_manager: Optional[ServiceManager] = None
         self.message_storage_service: Optional[MessageStorageService] = None
 
@@ -39,35 +42,49 @@ class Agent:
         self.state = AgentState()
         self.context_manager: Optional[ContextManager] = None
         self.token_counter = TokenCounter()
+        self.conversation_id: Optional[str] = None
 
     def update_other_agents_info(self, other_agents: dict[str, dict[str, str]]) -> None:
-        self.context_manager.update_other_agents_info(other_agents)
+        self.other_agents = other_agents
 
     def _get_system_message(self) -> MessageParam:
         return self.context_manager.get_system_message()
 
-    async def _initialize(self, tool_manager: ToolManager, service_manager: Optional[ServiceManager] = None):
+    async def initialize(self, tool_manager: ToolManager, service_manager: Optional[ServiceManager] = None):
         if self.state.has_initialized:
             return
 
         logger.debug(f"initialize ... \n{self.config.model_dump_json(indent=4)}")
 
+        self.service_manager = service_manager
         if not self.tool_manager:
             self.tool_manager = tool_manager
             await tool_manager.initialize()
             self._update_tools()
 
-        self.service_manager = service_manager
+        if self.service_manager:
+            conversation = await service_manager.get_conversation(self.id)
+            if conversation:
+                self.session_context.update(conversation_id=conversation.id)
+            else:
+                logger.error(f"No conversation found for agent: {self.id}")
+        else:
+            logger.warning(f"No service manager found for agent: {self.id}")
+
         self.context_manager = ContextManager(
+            session_context=self.session_context,
             config=self.config,
             state=self.state,
-            tool_manager=self.tool_manager,
-            service_manager=service_manager,
+            other_agents=self.other_agents,
+            tool_manager=tool_manager,
+            service_manager=self.service_manager,
         )
         try:
             await self.update_context()
             if self.config.feature_flag.enable_storage and self.message_storage_service:
-                messages = await self.message_storage_service.get_messages_asc(limit=10)
+                messages = await self.message_storage_service.get_messages_asc(
+                    conversation_id=self.conversation_id, limit=10
+                )
                 if messages:
                     logger.debug(f"initial messages: {len(messages)}")
                     self.context_manager.context_window_manager.clear_messages()
@@ -140,7 +157,10 @@ class Agent:
         if not self.config.feature_flag.enable_storage or not self.message_storage_service:
             return message
         try:
-            message_with_id = await self.message_storage_service.persist_message(message)
+            message_with_id = await self.message_storage_service.persist_message(
+                conversation_id=self.conversation_id,
+                message=message,
+            )
             return message_with_id
         except Exception as e:
             self.state.record_error(e)
@@ -171,13 +191,10 @@ class Agent:
     async def run(
         self,
         run_metadata: RunMetadata,
-        tool_manager: ToolManager,
-        service_manager: Optional[ServiceManager] = None,
         author: Optional[Author] = None,
     ) -> Union[CompletionResponse, ToolCallToolUseBlock]:
         try:
             self.metadata = run_metadata
-            await self._initialize(tool_manager=tool_manager, service_manager=service_manager)
             message_params = await self.build_message_params()
             messages_str = str(message_params)
             self.state.update_token_stats("messages", messages_str)
@@ -232,7 +249,7 @@ class Agent:
     async def handle_overwrite_config(self):
         if not self.service_manager:
             return
-        override_config: AgentConfig = await self.service_manager.get_latest_agent_config()
+        override_config: AgentConfig = await self.service_manager.get_agent_config()
         if not override_config:
             return
         self.config = self.config.model_copy()

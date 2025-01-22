@@ -135,8 +135,7 @@ async def test_create_default_conversation_without_assistant(mock_http_transport
     expected_data = ConversationCreate(title="Default", metadata={"is_primary": True}).model_dump()
 
     mock_http_transport.request.assert_called_once_with("POST", "/conversations", data=expected_data)
-    assert result == "conv_123"
-    assert client._default_conversation_id == "conv_123"
+    assert result.id == "conv_123"
 
 
 @pytest.mark.asyncio
@@ -149,7 +148,7 @@ async def test_create_default_conversation_with_existing_primary(mock_http_trans
     result = await client.create_default_conversation(assistant_id="asst_123")
 
     mock_http_transport.request.assert_called_once_with("GET", "/assistants/asst_123/conversations?skip=0&limit=50")
-    assert result == "conv_123"
+    assert result.id == "conv_123"
 
 
 @pytest.mark.asyncio

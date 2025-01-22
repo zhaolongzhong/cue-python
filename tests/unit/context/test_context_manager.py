@@ -2,7 +2,7 @@ from unittest.mock import Mock, AsyncMock
 
 import pytest
 
-from cue.tools._tool import Tool, ToolManager
+from cue.tools._tool import Tool
 from cue.agent.agent_state import AgentState
 from cue.types.agent_config import AgentConfig
 from cue.context.context_manager import ContextManager
@@ -23,12 +23,6 @@ def basic_config():
 
 
 @pytest.fixture
-def tool_manager() -> ToolManager:
-    """Create a mock tool manager for testing."""
-    return Mock(spec=ToolManager)
-
-
-@pytest.fixture
 def service_manager() -> ServiceManager:
     """Create a mock service manager for testing."""
     service_manager = Mock(spec=ServiceManager)
@@ -38,10 +32,15 @@ def service_manager() -> ServiceManager:
 
 
 @pytest.fixture
-def context_manager(basic_config, tool_manager, service_manager):
+def context_manager(session_context, basic_config, service_manager):
     """Create a ContextManager instance with basic config"""
     state = AgentState()
-    return ContextManager(config=basic_config, state=state, tool_manager=tool_manager, service_manager=service_manager)
+    return ContextManager(
+        session_context=session_context,
+        config=basic_config,
+        state=state,
+        service_manager=service_manager,
+    )
 
 
 def test_context_manager_initialization(context_manager):
@@ -62,7 +61,7 @@ def test_generate_description(context_manager):
     assert "edit" in description
 
 
-def test_generate_description_no_tools():
+def test_generate_description_no_tools(session_context):
     """Test description generation without tools"""
     config = AgentConfig(
         id="test-agent",
@@ -73,7 +72,7 @@ def test_generate_description_no_tools():
         project_context_path="/tmp",
     )
     state = AgentState()
-    manager = ContextManager(config=config, state=state, tool_manager=None, service_manager=None)
+    manager = ContextManager(session_context=session_context, config=config, state=state, service_manager=None)
     description = manager.generate_description()
     assert description is None
 

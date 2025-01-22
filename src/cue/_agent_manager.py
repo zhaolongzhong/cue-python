@@ -80,7 +80,10 @@ class AgentManager:
 
         # Update other agents info once we set primary agent
         self._update_other_agents_info()
-        await self.initialize_run()
+        if not self.tool_manager:
+            self.tool_manager = ToolManager(service_manager=self.service_manager, mcp=self.mcp)
+        for agent in self._agents.values():
+            await agent.initialize(self.tool_manager, self.service_manager)
 
     async def clean_up(self):
         if self.service_manager:
@@ -101,10 +104,6 @@ class AgentManager:
         self.primary_agent = None
         self.active_agent = None
         logger.info("All agents cleaned up and removed.")
-
-    async def initialize_run(self):
-        if not self.tool_manager:
-            self.tool_manager = ToolManager(service_manager=self.service_manager, mcp=self.mcp)
 
     async def start_run(
         self,
@@ -174,8 +173,6 @@ class AgentManager:
                 response = await self.agent_loop.run(
                     agent=self.active_agent,
                     run_metadata=self.run_metadata,
-                    tool_manager=self.tool_manager,
-                    service_manager=self.service_manager,
                     callback=callback,
                     prompt_callback=self.prompt_callback,
                 )

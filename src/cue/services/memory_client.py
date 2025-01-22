@@ -19,37 +19,20 @@ class MemoryClient(ResourceClient):
 
     def __init__(self, http: HTTPTransport, ws: Optional[WebSocketTransport] = None):
         super().__init__(http, ws)
-        self._default_assistant_id: Optional[str] = None
 
-    def set_default_assistant_id(self, assistant_id):
-        self._default_assistant_id = assistant_id
-
-    async def get_safe_assistant_id(self, assistant_id: Optional[str] = None) -> str:
-        """If no assistant id provided, use default assistant"""
-        if not assistant_id:
-            if not self._default_assistant_id:
-                raise Exception("No default assistant id provided.")
-            assistant_id = self._default_assistant_id
-        return assistant_id
-
-    async def create(self, memory: AssistantMemoryCreate, assistant_id: Optional[str] = None) -> AssistantMemory:
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
+    async def create(self, assistant_id: str, memory: AssistantMemoryCreate) -> AssistantMemory:
         response = await self._http.request("POST", f"/assistants/{assistant_id}/memories", data=memory.model_dump())
         return AssistantMemory(**response)
 
-    async def get_memory(self, memory_id: str, assistant_id: Optional[str] = None) -> Optional[AssistantMemory]:
+    async def get_memory(self, assistant_id: str, memory_id: str) -> Optional[AssistantMemory]:
         """Get memory by ID"""
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request("GET", f"/assistants/{assistant_id}/memories/{memory_id}")
         if response:
             return AssistantMemory(**response)
         return None
 
-    async def get_memories(
-        self, assistant_id: Optional[str] = None, skip: int = 0, limit: int = 100
-    ) -> list[AssistantMemory]:
+    async def get_memories(self, assistant_id: str, skip: int = 0, limit: int = 100) -> list[AssistantMemory]:
         """Get memories for an assistant in desc order by updated_at"""
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request("GET", f"/assistants/{assistant_id}/memories?skip={skip}&limit={limit}")
         if not response:
             return []
@@ -57,30 +40,34 @@ class MemoryClient(ResourceClient):
 
     async def update_memory(
         self,
+        assistant_id: str,
         memory_id: str,
         memory: AssistantMemoryUpdate,
-        assistant_id: Optional[str] = None,
     ) -> AssistantMemory:
         """Update memory"""
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request(
             "PUT", f"/assistants/{assistant_id}/memories/{memory_id}", memory.model_dump()
         )
         return AssistantMemory(**response)
 
-    async def delete_memories(self, memory_ids: list[str], assistant_id: Optional[str] = None) -> dict[str, Any]:
+    async def delete_memories(
+        self,
+        assistant_id: str,
+        memory_ids: list[str],
+    ) -> dict[str, Any]:
         """Bulk delete multiple memories for an assistant."""
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
         response = await self._http.request(
             "DELETE", f"/assistants/{assistant_id}/memories", data={"memory_ids": memory_ids}
         )
         return response
 
     async def search_memories(
-        self, query: str, limit: int = 5, assistant_id: Optional[str] = None
+        self,
+        assistant_id: str,
+        query: str,
+        limit: int = 5,
     ) -> RelevantMemoriesResponse:
         """Search memories by query"""
-        assistant_id = await self.get_safe_assistant_id(assistant_id)
         validated_limit = min(max(limit, 1), 20)
 
         params = (

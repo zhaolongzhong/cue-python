@@ -1,9 +1,12 @@
 import logging
+from unittest.mock import Mock
 
 import pytest
 
 from cue.utils.logs import setup_logging
+from cue.tools._tool import ToolManager
 from cue.llm.llm_model import ChatModel
+from cue._session_context import SessionContext
 
 # Global configuration dictionary
 test_config = {"default_model": ChatModel.GPT_4O_MINI}
@@ -39,3 +42,14 @@ def set_default_model(model: str) -> None:
 #     asyncio.set_event_loop(loop)
 #     yield loop
 #     loop.close()
+
+
+@pytest.fixture
+def session_context():
+    return SessionContext(assistant_id="asst_123", conversation_id="conv_123")
+
+
+@pytest.fixture
+def tool_manager() -> ToolManager:
+    """Create a mock tool manager for testing."""
+    return Mock(spec=ToolManager)
