@@ -53,7 +53,12 @@ class CueClient(LLMRequest):
             messages.insert(0, system_message)
             request.messages = messages
 
-            async with httpx.AsyncClient() as client:
+            async with httpx.AsyncClient(
+                transport=httpx.AsyncHTTPTransport(
+                    http1=True,  # Explicitly use HTTP/1.1
+                    http2=False,
+                )
+            ) as client:
                 headers = {
                     "X-API-Key": f"{self.api_key}",
                     "Content-Type": "application/json",
