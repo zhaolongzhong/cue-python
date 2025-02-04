@@ -20,6 +20,7 @@ class ChatModel(Enum):
     O1 = ("o1", True, "openai")
     O1_MINI = ("o1-mini", False, "openai")
     O1_PREVIEW = ("o1-preview", False, "openai")
+    O3_MINI = ("o3-mini", True, "openai")
 
     def __init__(self, id, tool_use_support, provider):
         self.id = id

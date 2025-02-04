@@ -44,7 +44,7 @@ class OpenAIClient(LLMRequest):
             ]
             DebugUtils.debug_print_messages(messages, tag=f"{self.config.id} send_completion_request")
             is_o1_mini = "o1-mini" == request.model
-            is_o1 = "o1" == request.model
+            is_reasoning_model = "o1" == request.model or "o3-mini" == request.model
             if is_o1_mini:
                 messages = self.handle_o1_model(messages, request)
                 DebugUtils.take_snapshot(messages, suffix=f"{request.model}_pre_request")
@@ -80,12 +80,12 @@ class OpenAIClient(LLMRequest):
                 }
                 logger.debug(
                     f"{self.config.model_dump_json(indent=4)} input_tokens: {json.dumps(input_tokens, indent=4)} "
-                    "\nsystem_message: \n{json.dumps(system_message, indent=4)}"
+                    f"\nsystem_message: \n{json.dumps(system_message, indent=4)}"
                 )
                 messages.insert(0, system_message)
                 DebugUtils.take_snapshot(messages=messages, suffix=f"{request.model}_pre_request")
                 if self.tools:
-                    if is_o1:
+                    if is_reasoning_model:
                         response = await self.client.chat.completions.create(
                             messages=messages,
                             model=self.model,
