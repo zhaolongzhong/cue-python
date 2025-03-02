@@ -228,3 +228,54 @@ class CompletionResponse:
 
     def _response_to_chat_completion_params(self, response: ChatCompletion):
         return cast(ChatCompletionAssistantMessageParam, response.choices[0].message.model_dump())
+
+    @staticmethod
+    def parse_response_data(response_data: dict, model: str) -> "CompletionResponse":
+        """
+        Parse response data from various formats into a standardized CompletionResponse.
+
+        Handles three formats:
+        1. AnthropicMessage format: {'content': [{'text': '...', 'type': 'text'}], ...}
+        2. ChatCompletion format: {'choices': [{'message': {'content': '...'}}], ...}
+        3. CompletionResponse format: {'model': '...', 'content': '...'}
+        """
+
+        # AnthropicMessage format
+        if "content" in response_data and isinstance(response_data.get("content"), list):
+            return CompletionResponse(
+                model=model,
+                anthropic_message=response_data,
+            )
+
+        # ChatCompletion format
+        elif "choices" in response_data and isinstance(response_data.get("choices"), list):
+            return CompletionResponse(
+                model=model,
+                chat_completion=response_data,
+            )
+
+        # Has chat_completion field
+        elif "chat_completion" in response_data and isinstance(response_data["chat_completion"], dict):
+            chat_completion = response_data["chat_completion"]
+            return CompletionResponse(
+                model=response_data.get("model", model),
+                chat_completion=chat_completion,
+            )
+
+        # Has anthropic_message field
+        elif "anthropic_message" in response_data and isinstance(response_data["anthropic_message"], dict):
+            anthropic_message = response_data["anthropic_message"]
+            return CompletionResponse(
+                model=model,
+                anthropic_message=anthropic_message,
+            )
+
+        # Direct CompletionResponse format
+        elif "model" in response_data and "content" in response_data:
+            return CompletionResponse(**response_data)
+
+        print(f"Unrecognized response format with keys: {list(response_data.keys())}")
+        return CompletionResponse(
+            model=model,
+            response=str(response_data),
+        )

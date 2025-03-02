@@ -49,8 +49,9 @@ class CueClient(LLMRequest):
             system_prompt = (
                 f"{SYSTEM_PROMPT}{' ' + request.system_prompt_suffix if request.system_prompt_suffix else ''}"
             )
-            system_message = {"role": "system", "content": system_prompt}
-            messages.insert(0, system_message)
+            if "claude" not in request.model:
+                system_message = {"role": "system", "content": system_prompt}
+                messages.insert(0, system_message)
             request.messages = messages
 
             async with httpx.AsyncClient(
@@ -93,7 +94,7 @@ class CueClient(LLMRequest):
                         return CompletionResponse(author=request.author, model=self.model, error=error)
 
                     response_data = response.json()
-                    return CompletionResponse(**response_data)
+                    return CompletionResponse.parse_response_data(response_data=response_data, model=self.model)
 
                 except httpx.TimeoutException as e:
                     error = ErrorResponse(
