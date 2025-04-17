@@ -4,19 +4,29 @@ from enum import Enum
 
 class ChatModel(Enum):
     # Claude https://docs.anthropic.com/en/docs/about-claude/models#model-names
+    CLAUDE_3_7_SONNET_20250219 = ("claude-3-7-sonnet-20250219", True, "anthropic")
     CLAUDE_3_OPUS_20240229 = ("claude-3-opus-20240229", True, "anthropic")
     CLAUDE_3_5_SONNET_20241022 = ("claude-3-5-sonnet-20241022", True, "anthropic")
     CLAUDE_3_5_HAIKU_20241022 = ("claude-3-5-haiku-20241022", True, "anthropic")
-    CLAUDE_3_7_SONNET_20241022 = ("claude-3-7-sonnet-20250219", True, "anthropic")
 
     # Gemini https://ai.google.dev/gemini-api/docs/models/gemini#model-variations
     # https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/call-gemini-using-openai-library#supported_models
+    GEMINI_2_5_FLASH_20250417 = ("gemini-2.5-flash-preview", True, "google")
+    GEMINI_2_5_PRO_EXP = ("gemini-2.5-pro-exp-03-25", True, "google")
+    GEMINI_2_0_FLASH_THINKING_EXP = ("gemini-2.0-flash-thinking-exp-01-21", True, "google")
+    GEMINI_2_0_FLASH = ("gemini-2.0-flash", True, "google")
     GEMINI_1_5_FLASH = ("gemini-1.5-flash", True, "google")
     GEMINI_EXP_1206 = ("gemini-exp-1206", True, "google")
     GEMINI_1_5_PRO = ("gemini-1.5-pro", True, "google")
-    GEMINI_2_0_FLASH = ("gemini-2.0-flash", True, "google")
 
     # OpenAI https://platform.openai.com/docs/models/overview
+    GPT_41 = ("gpt-4.1", True, "openai")
+    GPT_41_MINI = ("gpt-4.1-mini", True, "openai")
+    GPT_41_MINI_2025_04_14 = ("gpt-4.1-mini-2025-04-14", True, "openai")
+    GPT_41_NANO = ("gpt-4.1-nano", True, "openai")
+    GPT_41_NANO_2025_04_14 = ("gpt-4.1-nano-2025-04-14", True, "openai")
+    O4_MINI = ("o4-mini", True, "openai")
+    O4_MINI_2025_04_16 = ("o4-mini-2025-04-16", True, "openai")
     GPT_4O = ("gpt-4o", True, "openai")
     GPT_4O_MINI = ("gpt-4o-mini", True, "openai")
     GPT_45 = ("gpt-4.5-preview", True, "openai")

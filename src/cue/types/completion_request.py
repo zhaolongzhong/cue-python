@@ -11,6 +11,7 @@ __all__ = ["CompletionRequest"]
 class CompletionRequest(BaseModel):
     author: Optional[Author] = Field(default=None, description="Author")
     messages: list[dict]
+    contents: list[dict] = Field(default=None, description="Contents for gemini")
     model: str = "gpt-4o-mini"
     max_tokens: int = Field(default=4096, ge=1, description="The maximum number of tokens to generate.")
     temperature: float = Field(default=0.8, ge=0, le=2, description="The sampling temperature for generation.")
