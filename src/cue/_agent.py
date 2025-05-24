@@ -249,7 +249,7 @@ class Agent:
     async def handle_overwrite_config(self):
         if not self.service_manager:
             return
-        override_config: AgentConfig = await self.service_manager.get_agent_config()
+        override_config: AgentConfig = await self.service_manager.get_agent_config(assistant_id=self.id)
         if not override_config:
             return
         self.config = self.config.model_copy()
@@ -263,6 +263,7 @@ class Agent:
             self.context_manager.reset(self.state)
 
     async def reset_state(self):
+        logger.debug(f"Resetting state for agent {self.id}")
         self.state = AgentState()
         await self.handle_overwrite_config()
 

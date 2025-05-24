@@ -60,6 +60,13 @@ class AgentControlPayload(AgentPayloadBase):
     control_type: AgentControlType
     parameters: dict[str, Any] = Field(default_factory=dict)
 
+    # Allow recipient to be used as agent_id for compatibility
+    def __init__(self, **data):
+        # Map recipient to agent_id if agent_id is not provided
+        if "agent_id" not in data and "recipient" in data:
+            data["agent_id"] = data["recipient"]
+        super().__init__(**data)
+
 
 class AgentStatePayload(AgentPayloadBase):
     state: AgentState

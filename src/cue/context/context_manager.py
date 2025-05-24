@@ -40,6 +40,7 @@ class ContextManager:
         self.initialize()
 
     def initialize(self):
+        logger.debug("Initializing ContextManager with config: %s", self.config)
         self.system_context_manager = SystemContextManager(
             session_context=self.session_context,
             metrics=self.state.get_metrics(),

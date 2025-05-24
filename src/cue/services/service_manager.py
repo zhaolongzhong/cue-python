@@ -91,6 +91,7 @@ class ServiceManager:
                 "message": self._handle_message,
                 "user": self._handle_message,
                 "assistant": self._handle_message,
+                "agent_control": self._handle_message,
             },
         )
 

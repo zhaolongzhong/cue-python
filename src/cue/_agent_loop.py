@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class AgentLoop:
-    def __init__(self):
+    def __init__(self, stop_run_event: Optional[asyncio.Event] = None):
         self.settings = get_settings()
-        self.stop_run_event: asyncio.Event = asyncio.Event()
+        self.stop_run_event: asyncio.Event = stop_run_event or asyncio.Event()
         self.user_message_queue: asyncio.Queue[str] = asyncio.Queue()
         self.execute_run_task: Optional[asyncio.Task] = None
 
@@ -52,6 +52,22 @@ class AgentLoop:
         response = None
         author = Author(role="user")
         monitoring = agent.service_manager.monitoring if agent.service_manager else None
+        stop_message_added = False  # Flag to ensure we only add stop message once
+
+        async def add_stop_message_if_needed():
+            nonlocal stop_message_added
+            if not stop_message_added:
+                stop_message = MessageParam(
+                    role="user",
+                    content=(
+                        "[SYSTEM] The previous request has been stopped by the user. "
+                        "No further action is needed for the previous task."
+                    ),
+                    model=agent.config.model,
+                )
+                await agent.add_message(stop_message)
+                stop_message_added = True
+                logger.info("Added stop notification message to agent conversation.")
 
         while True:
             if self.stop_run_event.is_set():
@@ -59,7 +75,16 @@ class AgentLoop:
                 break
 
             # Process queued messages
+            queue_stopped = False
             while not self.user_message_queue.empty():
+                if self.stop_run_event.is_set():
+                    logger.info(
+                        "Stop signal received while processing queue. "
+                        "Adding stop notification and exiting execute_run loop."
+                    )
+                    await add_stop_message_if_needed()
+                    queue_stopped = True
+                    break
                 try:
                     new_message = self.user_message_queue.get_nowait()
                     logger.info(f"Received new user message during run: {new_message}")
@@ -69,6 +94,15 @@ class AgentLoop:
                         await callback(response)
                 except asyncio.QueueEmpty:
                     break
+
+            if queue_stopped or self.stop_run_event.is_set():
+                if not queue_stopped:  # Only add message if not already added
+                    logger.info(
+                        "Stop signal received after processing queue. "
+                        "Adding stop notification and exiting execute_run loop."
+                    )
+                    await add_stop_message_if_needed()
+                break
 
             try:
                 response: CompletionResponse = await agent.run(
@@ -85,6 +119,13 @@ class AgentLoop:
                     await monitoring.report_exception(
                         e, error_type=ErrorType.SYSTEM, additional_context={"component": "_agent_loop"}
                     )
+                break
+
+            if self.stop_run_event.is_set():
+                logger.info(
+                    "Stop signal received after agent run. Adding stop notification and exiting execute_run loop."
+                )
+                await add_stop_message_if_needed()
                 break
 
             author = Author(role="assistant")

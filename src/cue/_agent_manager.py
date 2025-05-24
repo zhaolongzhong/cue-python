@@ -38,7 +38,8 @@ class AgentManager:
         self.prompt_callback = prompt_callback
         self.user_message_queue: asyncio.Queue[str] = asyncio.Queue()
         self.loop = loop or asyncio.get_event_loop()
-        self.agent_loop = AgentLoop()
+        self.stop_run_event: asyncio.Event = asyncio.Event()
+        self.agent_loop = AgentLoop(stop_run_event=self.stop_run_event)
         self._agents: dict[str, Agent] = {}
         self.active_agent: Optional[Agent] = None
         self.primary_agent: Optional[Agent] = None
@@ -48,7 +49,6 @@ class AgentManager:
         self.console_utils = console_utils
 
         self.execute_run_task: Optional[asyncio.Task] = None
-        self.stop_run_event: asyncio.Event = asyncio.Event()
         self.mcp: MCPServerManager = None
         self.agent_state_manager = AgentStateManager()
 
@@ -131,7 +131,7 @@ class AgentManager:
             user_message = MessageParam(role="user", content=message, model=self.active_agent.config.model)
             message = await self.active_agent.add_message(user_message)
             await callback(message)
-        logger.debug(f"run - queued message for agent {active_agent_id}: {message}")
+        logger.debug(f"run - queued message for agent {active_agent_id}: {message}, run_metadata: {run_metadata}")
 
         if self.run_metadata.mode == "runner":
             # in runner mode, it should be called once
@@ -194,15 +194,41 @@ class AgentManager:
 
     async def stop_run(self):
         """Signal the execute_run loop to stop gracefully."""
+        # Add stop notification message to agent before stopping
         if self.active_agent:
+            try:
+                stop_message = MessageParam(
+                    role="user",
+                    content=(
+                        "[SYSTEM] The previous request has been stopped by the user. "
+                        "No further action is needed for the previous task."
+                    ),
+                    model=self.active_agent.config.model,
+                )
+                await self.active_agent.add_message(stop_message)
+                logger.info("Added stop notification message to agent conversation.")
+            except Exception as e:
+                logger.warning(f"Failed to add stop notification message: {e}")
+
             await self.agent_state_manager.set_agent_state(
-                self.active_agent.id, AgentState.STOPPING, metadata={"stop_requested": True}
+                self.active_agent.id, AgentState.STOPPED, metadata={"stop_requested": True}
             )
+
+        # Set the stop event immediately
+        self.stop_run_event.set()
+
         if self.execute_run_task and not self.execute_run_task.done():
             logger.info("Stopping the ongoing run...")
-            self.stop_run_event.set()
             try:
-                await self.execute_run_task
+                # Give it a short time to stop gracefully
+                await asyncio.wait_for(self.execute_run_task, timeout=2.0)
+            except asyncio.TimeoutError:
+                logger.info("Graceful stop timeout, cancelling task...")
+                self.execute_run_task.cancel()
+                try:
+                    await self.execute_run_task
+                except asyncio.CancelledError:
+                    logger.info("execute_run_task was cancelled.")
             except asyncio.CancelledError:
                 logger.info("execute_run_task was cancelled.")
             finally:
@@ -210,6 +236,8 @@ class AgentManager:
                 self.stop_run_event.clear()
                 logger.info("Run has been stopped.")
         else:
+            # Clear the event even if no task was running
+            self.stop_run_event.clear()
             logger.info("No active run to stop.")
 
     async def _handle_transfer(self, agent_transfer: AgentTransfer) -> None:
@@ -368,9 +396,10 @@ class AgentManager:
 
     async def _reset_agent(self, agent_id: str) -> None:
         """Reset agent to initial state"""
+        logger.info(f"Resetting agent {agent_id} to initial state.")
         if agent_id in self._agents:
             await self.stop_run()
-            self._agents[agent_id].reset_state()
+            await self._agents[agent_id].reset_state()
             await self.agent_state_manager.set_agent_state(
                 agent_id, AgentState.IDLE, metadata={"reset_at": datetime.now(timezone.utc).isoformat()}
             )

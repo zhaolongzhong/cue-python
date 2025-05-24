@@ -90,3 +90,54 @@ class EventMessage(BaseModel):
     client_id: Optional[str] = None
     metadata: Optional[dict] = Field(None, description="Metadata related to the event")
     websocket_request_id: Optional[str] = None
+
+    def __init__(self, **data):
+        # Custom parsing logic based on message type
+        message_type = data.get("type")
+        payload_data = data.get("payload", {})
+
+        # If payload is already a payload object, use it directly
+        if isinstance(
+            payload_data,
+            (
+                ClientEventPayload,
+                PingPongEventPayload,
+                MessagePayload,
+                GenericMessagePayload,
+                MessageChunkEventPayload,
+                MessageEventPayload,
+                AgentEventPayload,
+                AgentControlPayload,
+                AgentStatePayload,
+            ),
+        ):
+            data["payload"] = payload_data
+        else:
+            # Parse from dictionary based on message type
+            if message_type == EventMessageType.AGENT_CONTROL:
+                payload = AgentControlPayload(**payload_data)
+            elif message_type == EventMessageType.AGENT_EVENT:
+                payload = AgentEventPayload(**payload_data)
+            elif message_type == EventMessageType.AGENT_STATE:
+                payload = AgentStatePayload(**payload_data)
+            elif message_type in (
+                EventMessageType.CLIENT_CONNECT,
+                EventMessageType.CLIENT_DISCONNECT,
+                EventMessageType.CLIENT_STATUS,
+            ):
+                payload = ClientEventPayload(**payload_data)
+            elif message_type in (EventMessageType.PING, EventMessageType.PONG):
+                payload = PingPongEventPayload(**payload_data)
+            elif message_type in (EventMessageType.USER, EventMessageType.ASSISTANT):
+                payload = MessagePayload(**payload_data)
+            elif message_type == EventMessageType.MESSAGE_CHUNK:
+                payload = MessageChunkEventPayload(**payload_data)
+            elif message_type == EventMessageType.MESSAGE:
+                payload = MessageEventPayload(**payload_data)
+            else:
+                # Default to GenericMessagePayload for GENERIC and ERROR types
+                payload = GenericMessagePayload(**payload_data)
+
+            data["payload"] = payload
+
+        super().__init__(**data)
