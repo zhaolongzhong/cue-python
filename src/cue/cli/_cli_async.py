@@ -189,9 +189,9 @@ class CLI:
                         continue
 
                     # Handle empty or too short messages
-                    if not command and (not message or len(message) < 3):
+                    if not command and (not message or len(message) < 1):
                         logger.debug(f"command: {command}, message: {message}")
-                        self.console_utils.print_error_msg("Message must be at least 3 characters long.")
+                        self.console_utils.print_error_msg("Message must be at least 1 characters long.")
                         continue
 
                     # Handle commands

@@ -4,6 +4,8 @@ from enum import Enum
 
 class ChatModel(Enum):
     # Claude https://docs.anthropic.com/en/docs/about-claude/models#model-names
+    CLAUDE_OPUS_4_20250514 = ("claude-opus-4-20250514", True, "anthropic")
+    CLAUDE_SONNET_4_20250514 = ("claude-sonnet-4-20250514", True, "anthropic")
     CLAUDE_3_7_SONNET_20250219 = ("claude-3-7-sonnet-20250219", True, "anthropic")
     CLAUDE_3_OPUS_20240229 = ("claude-3-opus-20240229", True, "anthropic")
     CLAUDE_3_5_SONNET_20241022 = ("claude-3-5-sonnet-20241022", True, "anthropic")
@@ -20,6 +22,7 @@ class ChatModel(Enum):
     GEMINI_1_5_PRO = ("gemini-1.5-pro", True, "google")
 
     # OpenAI https://platform.openai.com/docs/models/overview
+    O3 = ("o3", True, "openai")
     GPT_41 = ("gpt-4.1", True, "openai")
     GPT_41_MINI = ("gpt-4.1-mini", True, "openai")
     GPT_41_MINI_2025_04_14 = ("gpt-4.1-mini-2025-04-14", True, "openai")

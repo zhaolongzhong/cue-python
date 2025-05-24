@@ -103,9 +103,9 @@ class AgentProvider:
         if not configs:
             logger.info("No agents found in config file, use default agents.")
             configs = self._default_configs.copy()
+            for config in self._default_configs.values():
+                logger.info(f"_default_configs self.config: {config.model_dump_json(indent=4, exclude_none=True)}")
         self.configs = configs
-        for config in self._default_configs.values():
-            logger.info(f"self.config: {config.model_dump_json(indent=4, exclude_none=True)}")
         return configs
 
     def get_primary_agent(self) -> Optional[AgentConfig]:
@@ -117,6 +117,7 @@ class AgentProvider:
     def _load_custom_configs(self) -> list[AgentConfig]:
         """Load custom agent configurations from file and convert to AgentConfig objects."""
         try:
+            logger.debug(f"Loading agents configuration from '{self.config_file}'")
             with open(self.config_file, encoding="utf-8") as f:
                 agents_data = json.load(f)
 
