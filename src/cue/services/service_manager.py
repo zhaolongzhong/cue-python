@@ -187,11 +187,16 @@ class ServiceManager:
         if isinstance(message, ToolResponseWrapper):
             role = "tool" if message.tool_messages else "user"
             name = message.author.name if message.author else None
-            payload = message.model_dump(exclude=None, exclude_unset=True, exclude_defaults=True)
+            # payload = message.model_dump(exclude=None, exclude_unset=True, exclude_defaults=True)
+            payload = {
+                "type": "tool_response",
+                "data": message.model_dump(exclude=None, exclude_unset=True, exclude_defaults=True),
+            }
             model = message.model
         elif isinstance(message, CompletionResponse):
             if isinstance(message.response, BaseModel):
-                payload = message.response.model_dump(exclude_none=True)
+                # payload = message.response.model_dump(exclude_none=True)
+                payload = {"type": "assistant_message", "data": message.response.model_dump(exclude_none=True)}
             name = self.assistant_id
             model = message.model
         elif isinstance(message, MessageParam):

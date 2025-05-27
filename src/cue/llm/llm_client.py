@@ -197,7 +197,7 @@ class LLMClient(LLMRequest):
             # BetaToolResultBlockParam
             tool_result_block_param = {
                 "tool_use_id": tool_id,
-                "content": str(tool_result_content),
+                "content": tool_result_content,
                 "type": "tool_result",
                 "is_error": is_error,
             }
