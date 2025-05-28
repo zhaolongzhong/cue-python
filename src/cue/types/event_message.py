@@ -39,6 +39,7 @@ class MessagePayloadBase(BaseModel):
     message: Optional[str] = Field(None, description="Message content")
     sender: Optional[str] = Field(None, description="Sender identifier")
     recipient: Optional[str] = Field(None, description="Recipient identifier")
+    conversation_id: Optional[str] = Field(None, description="Conversation identifier")
     websocket_request_id: Optional[str] = Field(None, description="Request tracking ID")
     metadata: Optional[dict] = Field(None, description="Metadata related to the message")
     payload: Optional[dict] = None

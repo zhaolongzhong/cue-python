@@ -59,6 +59,7 @@ class ServiceManager:
         self.agent = agent
         self.overwrite_agent_config: Optional[AgentConfig] = None
         self.assistant_id: Optional[str] = agent.id if agent else None
+        self.conversation_id: Optional[str] = None
         self.client_id: Optional[str] = agent.client_id if agent else run_metadata.id
         self.user_id: Optional[str] = None
         self.is_server_available = False
@@ -206,13 +207,13 @@ class ServiceManager:
         author = {"role": role}
         if name:
             author["name"] = name
-
         msg = EventMessage(
             type=EventMessageType.ASSISTANT,
             payload=MessagePayload(
                 message=message.get_text(),
                 sender=self.runner_id,
                 recipient="",  # empty or user id
+                conversation_id=self.conversation_id if self.conversation_id else "",
                 payload=payload,
                 websocket_request_id=str(uuid.uuid4()),
                 metadata={"author": author, "model": model},
@@ -254,6 +255,8 @@ class ServiceManager:
 
     async def _handle_message(self, message: EventMessage) -> None:
         if self.on_message_received:
+            if isinstance(message.payload, MessagePayload):
+                self.conversation_id = message.payload.conversation_id
             try:
                 await self.on_message_received(message)
             except Exception as e:
@@ -302,6 +305,8 @@ class ServiceManager:
 
     async def get_conversation(self, assistant_id: str) -> Conversation:
         conversation = await self.conversations.create_default_conversation(assistant_id)
+        if conversation:
+            self.conversation_id = conversation.id
         return conversation
 
     async def get_agent_config(self, assistant_id: str) -> Optional[AgentConfig]:
