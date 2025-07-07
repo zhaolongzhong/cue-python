@@ -165,20 +165,18 @@ class ServiceManager:
         await self.broadcast(message.model_dump_json())
 
     async def send_message_to_assistant(self, message: str) -> None:
-        websocket_request_id = str(uuid.uuid4())
-        msg = EventMessage(
-            type=EventMessageType.USER,
-            payload=MessagePayload(
-                message=message,
-                recipient="all",
-                websocket_request_id=websocket_request_id,
-                metadata={"author": {"role": "user"}, "recipient": self.assistant_id},
-            ),
-            websocket_request_id=websocket_request_id,
+        """Send message from user to assistant via HTTP endpoint."""
+        await self._send_message_via_http(
+            message_text=message,
+            role="user",
+            author={"role": "user"},
+            model=None,
+            msg_id=None,
+            payload=None,
         )
-        await self.broadcast(msg.model_dump_json())
 
     async def send_message_to_user(self, message: Union[CompletionResponse, ToolResponseWrapper, MessageParam]) -> None:
+        """Send message from assistant to user via HTTP endpoint."""
         payload = None
         role = "assistant"
         name = None
@@ -202,20 +200,15 @@ class ServiceManager:
         if name:
             author["name"] = name
 
-        msg = EventMessage(
-            type=EventMessageType.ASSISTANT,
-            payload=MessagePayload(
-                message=message.get_text(),
-                sender=self.runner_id,
-                recipient="",  # empty or user id
-                payload=payload,
-                websocket_request_id=str(uuid.uuid4()),
-                metadata={"author": author, "model": model},
-                msg_id=message.msg_id,
-            ),
-            websocket_request_id=str(uuid.uuid4()),
+        # Use HTTP endpoint instead of direct broadcast
+        await self._send_message_via_http(
+            message_text=message.get_text(),
+            role=role,
+            author=author,
+            model=model,
+            msg_id=message.msg_id,
+            payload=payload,
         )
-        await self.broadcast(msg.model_dump_json())
 
     async def broadcast_client_status(self) -> None:
         logger.debug("broadcast client status")
@@ -311,3 +304,87 @@ class ServiceManager:
             description=metadata.description,
         )
         return self.overwrite_agent_config
+
+    async def _send_message_via_http(
+        self,
+        message_text: str,
+        role: str,
+        author: dict,
+        model: Optional[str] = None,
+        msg_id: Optional[str] = None,
+        payload: Optional[dict] = None,
+    ) -> None:
+        """Send message via HTTP using ConversationClient."""
+        if not self.is_server_available:
+            logger.warning("Server is not available, cannot send message via HTTP")
+            await self._fallback_to_direct_broadcast(message_text, role, author, model, msg_id, payload)
+            return
+
+        # We need conversation_id - for now, get default conversation
+        if not self.assistant_id:
+            logger.warning("No assistant_id available, cannot send message")
+            await self._fallback_to_direct_broadcast(message_text, role, author, model, msg_id, payload)
+            return
+            
+        try:
+            conversation = await self.get_conversation(self.assistant_id)
+            conversation_id = conversation.id
+        except Exception as e:
+            logger.error(f"Failed to get conversation: {e}")
+            await self._fallback_to_direct_broadcast(message_text, role, author, model, msg_id, payload)
+            return
+
+        # Use ConversationClient to broadcast
+        response = await self.conversations.broadcast_message(
+            conversation_id=conversation_id,
+            message_text=message_text,
+            role=role,
+            author=author,
+            model=model,
+            msg_id=msg_id,
+            payload=payload,
+        )
+        
+        if response is None:
+            logger.info("HTTP broadcast failed, falling back to direct WebSocket broadcast")
+            await self._fallback_to_direct_broadcast(message_text, role, author, model, msg_id, payload)
+
+    async def _fallback_to_direct_broadcast(
+        self,
+        message_text: str,
+        role: str,
+        author: dict,
+        model: Optional[str] = None,
+        msg_id: Optional[str] = None,
+        payload: Optional[dict] = None,
+    ) -> None:
+        """Fallback to original direct broadcast method."""
+        websocket_request_id = str(uuid.uuid4())
+        
+        if role == "user":
+            msg = EventMessage(
+                type=EventMessageType.USER,
+                payload=MessagePayload(
+                    message=message_text,
+                    recipient="all",
+                    websocket_request_id=websocket_request_id,
+                    metadata={"author": author, "recipient": self.assistant_id},
+                ),
+                websocket_request_id=websocket_request_id,
+            )
+        else:
+            msg = EventMessage(
+                type=EventMessageType.ASSISTANT,
+                payload=MessagePayload(
+                    message=message_text,
+                    sender=self.runner_id,
+                    recipient="",
+                    payload=payload,
+                    websocket_request_id=websocket_request_id,
+                    metadata={"author": author, "model": model},
+                    msg_id=msg_id,
+                ),
+                websocket_request_id=websocket_request_id,
+            )
+        
+        await self.broadcast(msg.model_dump_json())

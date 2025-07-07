@@ -69,3 +69,46 @@ class ConversationClient(ResourceClient):
         if response is None:
             return []
         return [Conversation(**conv) for conv in response]
+
+    async def broadcast_message(
+        self,
+        conversation_id: str,
+        message_text: str,
+        role: str,
+        author: dict,
+        model: Optional[str] = None,
+        msg_id: Optional[str] = None,
+        payload: Optional[dict] = None,
+        websocket_request_id: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Send message to the lightweight broadcast endpoint for persistence + broadcasting."""
+        import uuid
+        
+        request_data = {
+            "content": {
+                "type": "text",
+                "texts": [message_text]
+            },
+            "author": author,
+            "conversation_id": conversation_id,
+            "websocket_request_id": websocket_request_id or str(uuid.uuid4()),
+        }
+        
+        if model:
+            request_data["model"] = model
+        if msg_id:
+            request_data["msg_id"] = msg_id
+        if payload:
+            request_data["payload"] = payload
+
+        try:
+            response = await self._http.request(
+                "POST", 
+                f"/conversation/{conversation_id}/broadcast", 
+                data=request_data
+            )
+            logger.debug(f"Message broadcast successfully: {message_text[:50]}...")
+            return response
+        except Exception as e:
+            logger.error(f"Failed to broadcast message via HTTP: {e}")
+            return None

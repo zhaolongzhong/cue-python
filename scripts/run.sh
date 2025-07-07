@@ -34,5 +34,5 @@ echo "Running in ${ENVIRONMENT} environment"
 
 # Run with uv command, it runs src.cue.cli._cli_async
 # uv run cue -r
-# uv run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r
-uv run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r -runner
+uv run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r
+# uv run python -W ignore::RuntimeWarning -m src.cue.cli._cli_async -r -runner
