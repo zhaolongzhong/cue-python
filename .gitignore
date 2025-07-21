@@ -4,7 +4,6 @@ __pycache__/
 *.egg-info
 .cache
 dist/
-temp/
 
 venv/
 .venv/
@@ -15,5 +14,7 @@ logs/
 
 **/*memory.jsonl*
 
+temp/
 credentials/
 mcp_config.json
+.cue/

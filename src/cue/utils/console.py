@@ -40,7 +40,7 @@ class PromptManager:
         with self.lock:
             if not self.prompt_active:
                 text = Text()
-                text.append("$ >> ", style="user")
+                # text.append("$ >> ", style="user")
                 self.console.print(text, end="")
                 self.prompt_active = True
                 # Debugging Statement (Optional)
@@ -107,7 +107,7 @@ class ConsoleUtils:
         sys.stdout.flush()
         # Create and print the styled message
         text = Text()
-        text.append("$ >> ", style="assistant_bold" if role == "assistant" else "user")
+        # text.append("$ >> ", style="assistant_bold" if role == "assistant" else "user")
         text.append(str(message), style="assistant" if role == "assistant" else "user")
         self.console.print(text)
         # Print the prompt after the message
