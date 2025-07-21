@@ -1,5 +1,5 @@
 import logging
-from typing import Union, Optional
+from typing import Any, Union, Callable, Optional
 
 from pydantic import BaseModel
 
@@ -43,9 +43,14 @@ class Agent:
         self.context_manager: Optional[ContextManager] = None
         self.token_counter = TokenCounter()
         self.conversation_id: Optional[str] = None
+        self.streaming_callback: Optional[Callable[[CompletionResponse], Any]] = None
 
     def update_other_agents_info(self, other_agents: dict[str, dict[str, str]]) -> None:
         self.other_agents = other_agents
+
+    def set_streaming_callback(self, callback: Optional[Callable[[CompletionResponse], Any]]) -> None:
+        """Set callback for streaming responses (used for Claude Code)."""
+        self.streaming_callback = callback
 
     def _get_system_message(self) -> MessageParam:
         return self.context_manager.get_system_message()
@@ -67,7 +72,7 @@ class Agent:
             if conversation:
                 self.session_context.update(conversation_id=conversation.id)
             else:
-                logger.error(f"No conversation found for agent: {self.id}")
+                logger.warning(f"No conversation found for agent: {self.id}")
         else:
             logger.warning(f"No service manager found for agent: {self.id}")
 
@@ -126,16 +131,16 @@ class Agent:
 
     async def add_messages(self, messages: list[Union[CompletionResponse, ToolResponseWrapper, MessageParam]]) -> list:
         try:
-            if self.config.feature_flag.enable_storage:
-                messages_with_id = []
-                for message in messages.copy():
-                    update_message = message
-                    if not message.msg_id:
-                        update_message = await self.persist_message(message)
-                    else:
-                        logger.debug(f"Message is already persisted: {message.msg_id}")
-                    messages_with_id.append(update_message)
-                messages = messages_with_id
+            # if self.config.feature_flag.enable_storage:
+            #     messages_with_id = []
+            #     for message in messages.copy():
+            #         update_message = message
+            #         if not message.msg_id:
+            #             update_message = await self.persist_message(message)
+            #         else:
+            #             logger.debug(f"Message is already persisted: {message.msg_id}")
+            #         messages_with_id.append(update_message)
+            #     messages = messages_with_id
             has_truncated_history = await self.context_manager.context_window_manager.add_messages(messages)
             if has_truncated_history:
                 """Only update context when there are truncated messages to make the most of prompt caching"""
@@ -235,7 +240,18 @@ class Agent:
             system_context=system_context,
         )
 
-        response = await self.client.send_completion_request(completion_request)
+        if self.config.streaming:
+            # Handle streaming responses with callback
+            response = None
+            async for streaming_response in self.client.send_streaming_completion_request(completion_request):
+                response = streaming_response
+                # Call streaming callback if available
+                if self.streaming_callback:
+                    await self.streaming_callback(streaming_response)
+            if response is None:
+                raise RuntimeError("No response received from Claude Code streaming")
+        else:
+            response = await self.client.send_completion_request(completion_request)
         usage_dict = record_usage(response)
         self.state.update_usage_stats(usage_dict)
         record_usage_details(self.state.get_token_stats())

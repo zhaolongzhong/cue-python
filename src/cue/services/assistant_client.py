@@ -26,21 +26,26 @@ class AssistantClient(ResourceClient):
 
     async def get(self, assistant_id: str) -> Assistant:
         response = await self._http.request("GET", f"/assistants/{assistant_id}")
+        if not response:
+            logger.warning(f"Get assistant failed {assistant_id}")
+            return
         return Assistant(**response)
 
     async def get_project_context(self, assistant_id: str) -> Optional[Union[dict, str]]:
-        response = await self._http.request("GET", f"/assistants/{assistant_id}")
-        asssistant = Assistant(**response)
-        return asssistant.metadata.context if asssistant.metadata else None
+        assistant = await self.get(assistant_id=assistant_id)
+        if not assistant:
+            return
+        return assistant.metadata.context if assistant.metadata else None
 
     async def get_system_context(self, assistant_id: str) -> Optional[Union[dict, str]]:
-        response = await self._http.request("GET", f"/assistants/{assistant_id}")
-        asssistant = Assistant(**response)
+        assistant = await self.get(assistant_id=assistant_id)
+        if not assistant:
+            return
         system_context = ""
-        if asssistant.metadata and asssistant.metadata.instruction:
-            system_context = f"<user_set_context>{asssistant.metadata.instruction}</user_set_context>"
-        if asssistant.metadata and asssistant.metadata.system:
-            system_context += f"<model_set_context>{asssistant.metadata.system}</model_set_context>"
+        if assistant.metadata and assistant.metadata.instruction:
+            system_context = f"<user_set_context>{assistant.metadata.instruction}</user_set_context>"
+        if assistant.metadata and assistant.metadata.system:
+            system_context += f"<model_set_context>{assistant.metadata.system}</model_set_context>"
         return system_context
 
     async def update(self, assistant_id: str, assistant: AssistantUpdate) -> Assistant:

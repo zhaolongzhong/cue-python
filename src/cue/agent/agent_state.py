@@ -62,7 +62,7 @@ class AgentState:
         """Record an error occurrence."""
         self.metrics.errors += 1
         self.metrics.last_error = str(error)
-        logger.error(f"Agent error: {error}, from: {from_tag}")
+        # logger.error(f"Agent error: {error}, from: {from_tag}")
 
     def record_tool_call(self) -> None:
         """Record a tool call."""

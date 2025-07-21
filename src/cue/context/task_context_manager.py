@@ -50,6 +50,9 @@ class TaskContextManager:
             logger.warning("No message client configured, skipping remote load")
             return
         conversation_id = self.session_context.conversation_id
+        if not conversation_id:
+            logger.debug("conversation_id is none")
+            return
         try:
             # Load user messages from remote
             messages = await self.service_manager.messages.get_conversation_messages(

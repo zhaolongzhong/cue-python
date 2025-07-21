@@ -5,7 +5,7 @@ from datetime import datetime
 from .types import AgentConfig, CompletionRequest
 from .utils import DebugUtils, TokenCounter, record_usage
 from .llm.llm_client import LLMClient
-from .utils.mesage_params_utils import get_text_from_message_params
+from .utils.message_params_utils import get_text_from_message_params
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +154,9 @@ def _get_summarizer_model(agent_model: str) -> str:
     Returns:
         str: The model name to use for the summarizer
     """
-    if "claude" in agent_model.lower():
+    if agent_model == "claude-code":
+        # Use a simple model for summarization when using claude-code
+        return "gpt-4o-mini"
+    elif "claude" in agent_model.lower():
         return "claude-3-5-haiku-20241022"
     return "gpt-4o-mini"

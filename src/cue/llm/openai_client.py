@@ -2,7 +2,7 @@ import os
 import re
 import json
 import logging
-from typing import Optional
+from typing import Optional, AsyncIterator
 
 import openai
 from pydantic import BaseModel
@@ -273,3 +273,8 @@ class OpenAIClient(LLMRequest):
         """
         tool_call_id = generate_id(prefix="call_", length=4)
         return tool_call_id
+
+    async def send_streaming_completion_request(self, request: CompletionRequest) -> AsyncIterator[CompletionResponse]:
+        """Streaming not implemented for OpenAI - yields single response."""
+        response = await self.send_completion_request(request)
+        yield response

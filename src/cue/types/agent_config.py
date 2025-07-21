@@ -37,4 +37,6 @@ class AgentConfig(BaseModel):
     parallel_tool_calls: bool = True
     conversation_id: Optional[str] = None
     enable_services: bool = False
+    enable_summarizer: bool = True  # Set to False to disable the summarizer
     feature_flag: FeatureFlag = Field(default_factory=FeatureFlag)
+    streaming: bool = False

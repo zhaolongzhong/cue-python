@@ -126,6 +126,9 @@ class AgentManager:
         # Start execute_run if not already running
         if not callback:
             callback = self.handle_response
+        # Set streaming callback for Claude Code agents
+        if self.active_agent.config.streaming:
+            self.active_agent.set_streaming_callback(self.handle_streaming_response)
         # Directly add message to the agent's message history
         if message:
             user_message = MessageParam(role="user", content=message, model=self.active_agent.config.model)
@@ -365,6 +368,22 @@ class AgentManager:
     async def handle_response(self, response: Union[CompletionResponse, ToolResponseWrapper, MessageParam]):
         self.console_utils.print_msg(f"{response.get_text()}")
         await self.broadcast_response(response)
+
+    async def handle_streaming_response(self, response: CompletionResponse):
+        """Handle streaming responses from Claude Code."""
+        text = response.get_text()
+
+        if text and text.strip():  # Print text responses
+            self.console_utils.print_msg(f"{text}")
+            await self.broadcast_response(response)
+        else:
+            # Handle tool calls and other non-text responses
+            tool_calls = response.get_tool_calls()
+            if tool_calls:
+                tool_preview = response.get_tool_calls_peek(debug=False)
+                if tool_preview:
+                    self.console_utils.print_msg(f"🔧 {tool_preview}")
+                    await self.broadcast_response(response)
 
     async def inject_user_message(self, user_input: str) -> None:
         """Inject a user message into the ongoing run."""

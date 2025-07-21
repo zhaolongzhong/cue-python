@@ -135,7 +135,7 @@ class ServiceManager:
             if not self.is_server_available:
                 return
         except Exception as e:
-            logger.error(f"Server availability check failed: {e}")
+            logger.warning(f"Server availability check failed: {e}")
             return
 
     async def close(self) -> None:

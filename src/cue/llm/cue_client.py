@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import AsyncIterator
 
 import httpx
 from pydantic import BaseModel
@@ -123,3 +124,8 @@ class CueClient(LLMRequest):
         if error:
             logger.error(f"Error details: {error.model_dump()}")
         return CompletionResponse(author=request.author, model=self.model, error=error)
+
+    async def send_streaming_completion_request(self, request: CompletionRequest) -> AsyncIterator[CompletionResponse]:
+        """Streaming not implemented for Cue - yields single response."""
+        response = await self.send_completion_request(request)
+        yield response

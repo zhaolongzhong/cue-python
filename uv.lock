@@ -315,6 +315,19 @@ wheels = [
 ]
 
 [[package]]
+name = "claude-code-sdk"
+version = "0.0.16"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/5a/c009a5cf98e26ac44f14c2e1dda599a31d2283c5ae41765afddfc558234b/claude_code_sdk-0.0.16.tar.gz", hash = "sha256:072ee4ea5548fa7dfa03d6c66f9912f7b9c767883ad5f9f9b09de9aa68605e4e", size = 21408 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6a/b0/204b1a8d106d4bc5ccb0524d331526371183ffd43a7bb3d33826b5a77795/claude_code_sdk-0.0.16-py3-none-any.whl", hash = "sha256:c4fd1865ebb75b0d62d8256614bb2f803ac6b7f15e52c40040ab9316578f916d", size = 16840 },
+]
+
+[[package]]
 name = "click"
 version = "8.1.8"
 source = { registry = "https://pypi.org/simple" }
@@ -345,6 +358,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "blobfile" },
     { name = "bs4" },
+    { name = "claude-code-sdk" },
     { name = "docker" },
     { name = "duckduckgo-search" },
     { name = "google-api-python-client" },
@@ -384,6 +398,7 @@ requires-dist = [
     { name = "asyncpg", specifier = "==0.29.0" },
     { name = "blobfile", specifier = "==2.1.1" },
     { name = "bs4", specifier = "==0.0.1" },
+    { name = "claude-code-sdk", specifier = ">=0.0.16" },
     { name = "docker", specifier = ">=7.1" },
     { name = "duckduckgo-search", specifier = "==6.1.12" },
     { name = "google-api-python-client", specifier = "==2.158.0" },

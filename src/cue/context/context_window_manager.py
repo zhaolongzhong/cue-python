@@ -8,7 +8,7 @@ from ..types import FeatureFlag, MessageParam, CompletionResponse, ToolResponseW
 from ..utils import DebugUtils, TokenCounter
 from ..schemas import MessageFields
 from .._agent_summarizer import ContentSummarizer
-from ..utils.mesage_params_utils import has_tool_calls, is_tool_result
+from ..utils.message_params_utils import has_tool_calls, is_tool_result
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +168,6 @@ class ContextWindowManager:
         for message in new_messages:
             msg_id = message.get("msg_id", None) if isinstance(message, dict) else message.msg_id
             message_dict = self._prepare_message_dict(message, msg_id)
-
             if isinstance(message_dict, list):
                 # Handle tool messages list
                 self.messages.extend(message_dict)

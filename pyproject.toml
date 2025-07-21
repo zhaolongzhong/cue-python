@@ -42,6 +42,7 @@ dependencies = [
     "tenacity>=9.0.0",
     "psutil>=6.1.0",
     "mcp==1.2.0",
+    "claude-code-sdk>=0.0.16",
 ]
 
 [project.optional-dependencies]
@@ -91,6 +92,7 @@ ignore = [
     "B904",  # Allow raising exceptions without from e, for HTTPException
     "UP006", # keep for agent
     "UP035", # keep for agent
+    "UP045", # disable `X | None`
 ]
 
 [tool.ruff.lint.isort]

@@ -1,7 +1,7 @@
 import json
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, AsyncIterator
 
 from mcp.types import CallToolResult
 from anthropic.types import ToolUseBlock, TextBlockParam, ImageBlockParam, ToolResultBlockParam
@@ -22,6 +22,7 @@ from .llm_request import LLMRequest
 from .gemini_client import GeminiClient
 from .openai_client import OpenAIClient
 from .anthropic_client import AnthropicClient
+from .claude_code_client import ClaudeCodeClient
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class LLMClient(LLMRequest):
             "anthropic": AnthropicClient,
             "google": GeminiClient,
             "cue": CueClient,
+            "claude_code": ClaudeCodeClient,
         }
 
         if config.use_cue:
@@ -52,6 +54,10 @@ class LLMClient(LLMRequest):
 
     async def send_completion_request(self, request: CompletionRequest) -> CompletionResponse:
         return await self.llm_client.send_completion_request(request=request)
+
+    async def send_streaming_completion_request(self, request: CompletionRequest) -> AsyncIterator[CompletionResponse]:
+        async for response in self.llm_client.send_streaming_completion_request(request=request):
+            yield response
 
     async def process_tools_with_timeout(
         self,

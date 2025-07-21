@@ -32,7 +32,7 @@ class ContextManager:
         self.session_context = session_context
         self.tool_manager = tool_manager
         self.service_manager = service_manager
-        self.summarizer: ContentSummarizer = create_summarizer(config)
+        self.summarizer: Optional[ContentSummarizer] = create_summarizer(config) if config.enable_summarizer else None
         self.other_agents = other_agents
         self.config = config
         self.state = state
@@ -123,13 +123,17 @@ class ContextManager:
 
     async def update_context(self) -> None:
         logger.debug("Update context ...")
-        await self.system_context_manager.update_base_context()
+        if self.system_context_manager:
+            await self.system_context_manager.update_base_context()
         logger.debug("Update recent memories ...")
         await self._update_recent_memories()
         logger.debug("Update project context ...")
-        await self.project_context_manager.update_context()
-        await self.task_context_manager.load_from_remote()
-        self.summarizer.update_context(self.system_context)
+        if self.project_context_manager:
+            await self.project_context_manager.update_context()
+        if self.task_context_manager:
+            await self.task_context_manager.load_from_remote()
+        if self.summarizer:
+            self.summarizer.update_context(self.system_context)
 
     async def _update_recent_memories(self) -> Optional[str]:
         """Should be called whenever there is a memory update"""

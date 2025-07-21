@@ -71,6 +71,7 @@ ignore = [
     "UP006", # Ignore use of Dict
     "UP035", # Ignore use of Dict or List
     "UP038", # Ignore (X, Y)
+    "UP045", # disable `X | None`
 ]
 
 [tool.ruff.lint.isort]

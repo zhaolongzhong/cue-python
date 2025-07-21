@@ -9,6 +9,12 @@ from anthropic.types import (
     TextBlockParam,
     ToolUseBlockParam,
 )
+from claude_code_sdk import (
+    TextBlock as ClaudeCodeTextBlock,
+    UserMessage as ClaudeCodeUserMessage,
+    ToolUseBlock as ClaudeCodeToolUseBlock,
+    AssistantMessage as ClaudeCodeAssistantMessage,
+)
 from openai.types.chat import ChatCompletion, ChatCompletionMessageToolCall, ChatCompletionAssistantMessageParam
 
 from .error import ErrorResponse
@@ -72,9 +78,11 @@ class CompletionResponse:
             return self.response.id
         elif isinstance(self.response, ChatCompletion):
             return self.response.id
-        raise InvalidResponseTypeError(
-            f"Expected AnthropicMessage or ChatCompletion, got {type(self.response).__name__}"
-        )
+        elif isinstance(self.response, (ClaudeCodeAssistantMessage, ClaudeCodeUserMessage)):
+            # Claude Code messages don't have IDs, generate a placeholder
+            return f"claude-code-{id(self.response)}"
+        else:
+            return "placeholder"
 
     def get_text(self) -> Optional[str]:
         if self.response is None:
@@ -87,6 +95,20 @@ class CompletionResponse:
 
         if isinstance(self.response, AnthropicMessage):
             return "\n".join(content.text for content in self.response.content if isinstance(content, TextBlock))
+        elif isinstance(self.response, ClaudeCodeAssistantMessage):
+            return "\n".join(
+                content.text for content in self.response.content if isinstance(content, ClaudeCodeTextBlock)
+            )
+        elif isinstance(self.response, ClaudeCodeUserMessage):
+            # Handle tool results in UserMessage
+            results = []
+            for content in self.response.content:
+                if isinstance(content, dict) and content.get("type") == "tool_result":
+                    if content.get("content"):
+                        results.append(f"Tool result: {content['content']}")
+                elif isinstance(content, ClaudeCodeTextBlock):
+                    results.append(content.text)
+            return "\n".join(results)
         elif isinstance(self.response, ChatCompletion):
             return self.response.choices[0].message.content
         raise InvalidResponseTypeError(
@@ -99,6 +121,16 @@ class CompletionResponse:
                 content_item for content_item in self.response.content if isinstance(content_item, ToolUseBlock)
             ]
             return tool_calls
+        elif isinstance(self.response, ClaudeCodeAssistantMessage):
+            tool_calls = [
+                content_item
+                for content_item in self.response.content
+                if isinstance(content_item, ClaudeCodeToolUseBlock)
+            ]
+            return tool_calls
+        elif isinstance(self.response, ClaudeCodeUserMessage):
+            # UserMessage contains tool results, not tool calls
+            return []
         elif isinstance(self.response, ChatCompletion):
             return self.response.choices[0].message.tool_calls
         elif isinstance(self.error, ErrorResponse):
@@ -115,7 +147,7 @@ class CompletionResponse:
 
         previews = []
         for tool in tool_calls:
-            if isinstance(tool, ToolUseBlock):
+            if isinstance(tool, (ToolUseBlock, ClaudeCodeToolUseBlock)):
                 tool_id = tool.id[:10]
                 preview_args = []
 
@@ -171,6 +203,8 @@ class CompletionResponse:
 
         if isinstance(self.response, AnthropicMessage):
             return CompletionUsage(**self.response.usage.model_dump())
+        elif isinstance(self.response, ClaudeCodeAssistantMessage):
+            return None
         elif isinstance(self.response, ChatCompletion):
             usage = self.response.usage
 
@@ -186,7 +220,13 @@ class CompletionResponse:
         )
 
     def __str__(self):
-        response = self.response.model_dump() if self.response else None
+        response = None
+        if self.response:
+            if hasattr(self.response, "model_dump"):
+                response = self.response.model_dump()
+            else:
+                # Handle dataclasses like ClaudeCodeAssistantMessage
+                response = str(self.response)
         return f"msg_id: {self.msg_id}, Text: {self.get_text()}, Tools: {self.get_tool_calls()}, Response: {response}"
 
     def to_params(self):
@@ -204,6 +244,8 @@ class CompletionResponse:
                 return AnthropicMessageParam(role="assistant", content=self._response_to_anthropic_params(response))
             elif isinstance(self.error, ErrorResponse):
                 return AnthropicMessageParam(role="assistant", content=error.model_dump_json())
+            elif isinstance(self.response, ClaudeCodeAssistantMessage):
+                return AnthropicMessageParam(role="assistant", content=response)
             else:
                 raise ValueError(f"Unexpected subclass of CompletionResponse: {type(response)}, {self.model}")
         else:

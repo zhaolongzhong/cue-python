@@ -40,6 +40,9 @@ class ChatModel(Enum):
 
     DEEP_SEEK_R1_7B = ("deepseek-r1:7b", False, "ollama")
 
+    # Claude Code
+    CLAUDE_CODE = ("claude-code", True, "claude_code")
+
     def __init__(self, id, tool_use_support, provider):
         self.id = id
         self.tool_use_support = tool_use_support
